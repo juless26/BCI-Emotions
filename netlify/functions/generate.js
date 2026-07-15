@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
 
     // Create prediction via Replicate API
     const predictionRequest = {
-      version: 'ac732df83cea7fff18b8472768c88ad041fa750ff7682a21aef33d3e3b7db126',      input: {
+        input: {
         prompt: enhancedPrompt,
         num_outputs: 1,
         height: 768,
