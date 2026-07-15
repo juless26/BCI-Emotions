@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCI Emotional Expression — Speech Decoded</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .control-panel {
+      width: 300px;
+      background: rgba(5, 5, 5, 0.98);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #e0e0e0;
+      line-height: 1.5;
+    }
+
+    .speech-input-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .decode-button {
+      padding: 12px;
+      background: #1a5f99;
+      border: 2px solid #2d8fc9;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .decode-button:hover {
+      background: #2d8fc9;
+      border-color: #4da6d6;
+      color: #ffffff;
+    }
+
+    .decode-button.listening {
+      background: rgba(255, 100, 100, 0.2);
+      border-color: rgba(255, 100, 100, 0.5);
+      color: #ff9999;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .decoded-words {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 50px;
+      font-size: 13px;
+      color: #ffffff;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .decoded-words.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .word-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .word-tag {
+      display: inline-block;
+      padding: 6px 10px;
+      background: #1a5f99;
+      border: 1px solid #2d8fc9;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .intensity-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .intensity-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .intensity-slider {
+      width: 100%;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .intensity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-webkit-slider-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-moz-range-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-display {
+      font-size: 12px;
+      color: #e0e0e0;
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .clear-button {
+      padding: 10px;
+      background: #664d4d;
+      border: 1px solid #8b6666;
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .clear-button:hover {
+      background: #8b6666;
+      border-color #a67c7c;
+      color: #ffffff;
+    }
+
+    .clear-button.active {
+      background: #1a1a1a;
+      border-color: #444;
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-area">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="control-panel">
+      <div class="header">
+        <h2>Light Space</h2>
+        <p>Speech-Decoded Emotional Expression</p>
+      </div>
+
+      <div class="speech-input-section">
+        <button class="decode-button" id="decodeButton">Decode Speech</button>
+        <div class="decoded-words" id="decodedWords">Awaiting input...</div>
+        <div class="word-tags" id="wordTags"></div>
+      </div>
+
+      <div class="intensity-section">
+        <label class="intensity-label">Intensity</label>
+        <input type="range" id="intensity" class="intensity-slider" min="1" max="5" value="3">
+        <div class="intensity-display"><span id="intensityValue">3</span> / 5</div>
+      </div>
+
+      <button class="clear-button" id="clearButton">Privacy Mode</button>
+
+      <div class="info-box">
+        Click "Decode Speech" to simulate BCI capturing your emotional words. Combine words like "calm and cool" or "anxious but hopeful" to create blended expressions.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Perlin noise implementation
+    class PerlinNoise {
+      constructor(seed = Math.random()) {
+        this.permutation = [];
+        for (let i = 0; i < 256; i++) {
+          this.permutation[i] = Math.floor(Math.random() * 256);
+        }
+        this.p = [...this.permutation, ...this.permutation];
+      }
+
+      fade(t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+      }
+
+      lerp(t, a, b) {
+        return a + t * (b - a);
+      }
+
+      grad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 8 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      noise(x, y) {
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+
+        const aa = this.p[this.p[xi] + yi];
+        const ba = this.p[this.p[xi + 1] + yi];
+        const ab = this.p[this.p[xi] + yi + 1];
+        const bb = this.p[this.p[xi + 1] + yi + 1];
+
+        const x1 = this.lerp(u, this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf));
+        const x2 = this.lerp(u, this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1));
+
+        return this.lerp(v, x1, x2);
+      }
+    }
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let animationId;
+    let perlinNoise = new PerlinNoise();
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth - 300;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Emotion word library
+    const emotionWords = {
+      calm: { colors: ['#E0F2F7', '#87CEEB', '#4A90E2'], arousal: 0.2, valence: 0.7, flowSpeed: 0.15 },
+      cool: { colors: ['#D4E6F1', '#5DADE2', '#2E86C1'], arousal: 0.25, valence: 0.65, flowSpeed: 0.2 },
+      peaceful: { colors: ['#F5F0FF', '#E6D5F0', '#D4A5D4'], arousal: 0.05, valence: 0.85, flowSpeed: 0.05 },
+      serene: { colors: ['#E8F8F5', '#A3E4D7', '#52BE80'], arousal: 0.1, valence: 0.8, flowSpeed: 0.1 },
+
+      happy: { colors: ['#FFF8DC', '#FFD700', '#FFA500'], arousal: 0.75, valence: 0.95, flowSpeed: 0.7 },
+      joyful: { colors: ['#FFFACD', '#FFD700', '#FF8C00'], arousal: 0.8, valence: 0.9, flowSpeed: 0.75 },
+      content: { colors: ['#FFFEF0', '#F9E79F', '#F4D03F'], arousal: 0.5, valence: 0.85, flowSpeed: 0.4 },
+      hopeful: { colors: ['#FCF3CF', '#F9E79F', '#F8C471'], arousal: 0.6, valence: 0.8, flowSpeed: 0.5 },
+
+      anxious: { colors: ['#330000', '#8B0000', '#DC143C'], arousal: 0.9, valence: 0.2, flowSpeed: 1.3 },
+      restless: { colors: ['#5D1F1A', '#A93226', '#E74C3C'], arousal: 0.85, valence: 0.3, flowSpeed: 1.2 },
+      tense: { colors: ['#4A1F1F', '#922B21', '#C0392B'], arousal: 0.8, valence: 0.25, flowSpeed: 1.0 },
+      overwhelmed: { colors: ['#1C0000', '#6C3483', '#AF7AC5'], arousal: 0.95, valence: 0.15, flowSpeed: 1.5 },
+
+      energized: { colors: ['#FF1493', '#FF6347', '#FFD700'], arousal: 0.9, valence: 0.85, flowSpeed: 1.2 },
+      vibrant: { colors: ['#FF69B4', '#FF1493', '#FF6347'], arousal: 0.88, valence: 0.8, flowSpeed: 1.15 },
+      inspired: { colors: ['#7B68EE', '#FF69B4', '#FFD700'], arousal: 0.75, valence: 0.8, flowSpeed: 0.95 },
+
+      sad: { colors: ['#1F618D', '#2E86AB', '#5D80A0'], arousal: 0.3, valence: 0.2, flowSpeed: 0.25 },
+      melancholy: { colors: ['#2C3E50', '#34495E', '#566573'], arousal: 0.35, valence: 0.3, flowSpeed: 0.3 }
+    };
+
+    // Sample phrases for simulation
+    const samplePhrases = [
+      'calm and cool',
+      'peaceful',
+      'anxious but hopeful',
+      'energized and inspired',
+      'content',
+      'overwhelmed and restless',
+      'joyful',
+      'calm and peaceful',
+      'energized',
+      'sad and melancholy'
+    ];
+
+    let currentWords = [];
+    let blendedEmotionData = null;
+    let intensity = 3;
+    let isCleared = false;
+
+    function blendEmotions(words) {
+      const validWords = words.filter(w => emotionWords[w.toLowerCase()]);
+      if (validWords.length === 0) return null;
+
+      let blended = {
+        colors: [],
+        arousal: 0,
+        valence: 0,
+        flowSpeed: 0
+      };
+
+      validWords.forEach((word, idx) => {
+        const data = emotionWords[word.toLowerCase()];
+        blended.colors.push(...data.colors);
+        blended.arousal += data.arousal;
+        blended.valence += data.valence;
+        blended.flowSpeed += data.flowSpeed;
+      });
+
+      // Average values
+      blended.arousal /= validWords.length;
+      blended.valence /= validWords.length;
+      blended.flowSpeed /= validWords.length;
+
+      // Deduplicate and limit colors
+      blended.colors = [...new Set(blended.colors)].slice(0, 3);
+
+      return blended;
+    }
+
+    function drawLightSpace(time, emotionData, intensity) {
+      const t = time * 0.0001 * emotionData.flowSpeed;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Create gradient
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      const colors = emotionData.colors;
+      if (colors.length === 1) {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[0]);
+      } else if (colors.length === 2) {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+      } else {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(0.5, colors[1]);
+        gradient.addColorStop(1, colors[2]);
+      }
+
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.7 + (intensity / 5) * 0.3;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+
+      // Flowing forms
+      ctx.globalAlpha = 0.15 + (intensity / 5) * 0.5;
+      const resolution = Math.max(2, 8 - Math.floor(intensity * 1.5));
+      const scale = 80 + emotionData.arousal * 40;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 0.3 + intensity * 0.5;
+
+      for (let y = 0; y < canvas.height; y += resolution) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += resolution) {
+          const noiseVal = perlinNoise.noise(
+            x / scale + t,
+            y / scale + t * 0.7 + emotionData.arousal * 10
+          );
+          const offsetY = y + noiseVal * 50 * emotionData.arousal * intensity;
+          if (x === 0) ctx.moveTo(x, offsetY);
+          else ctx.lineTo(x, offsetY);
+        }
+        ctx.stroke();
+      }
+
+      // Vertical lines
+      ctx.globalAlpha = 0.2 + (intensity / 5) * 0.2;
+      const lineCount = 8 + intensity * 2;
+      for (let i = 0; i < lineCount; i++) {
+        const x = (canvas.width / lineCount) * i;
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 20) {
+          const noiseVal = perlinNoise.noise(
+            x / scale * 0.5 + t * 0.5,
+            y / scale + t * emotionData.flowSpeed
+          );
+          const offsetX = x + noiseVal * 60 * emotionData.arousal;
+          if (y === 0) ctx.moveTo(offsetX, y);
+          else ctx.lineTo(offsetX, y);
+        }
+        ctx.stroke();
+      }
+
+      // Glow
+      ctx.globalAlpha = 0.3 * (intensity / 5) * 1.2;
+      const radialGradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 0,
+        canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height)
+      );
+      const glowStrength = 0.15 + (intensity / 5) * 0.35;
+      radialGradient.addColorStop(0, `rgba(255, 255, 255, ${glowStrength})`);
+      radialGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+      radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = radialGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.globalAlpha = 1;
+    }
+
+    function animate(time) {
+      if (isCleared) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (blendedEmotionData) {
+        drawLightSpace(time, blendedEmotionData, intensity);
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#555';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.4;
+        ctx.fillText('Click "Decode Speech"', canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillText('to express emotion', canvas.width / 2, canvas.height / 2 + 10);
+        ctx.globalAlpha = 1;
+      }
+
+      animationId = requestAnimationFrame(animate);
+    }
+    animate(0);
+
+    // Decode button
+    document.getElementById('decodeButton').addEventListener('click', () => {
+      const button = document.getElementById('decodeButton');
+      button.classList.add('listening');
+      button.textContent = 'Listening...';
+
+      setTimeout(() => {
+        isCleared = false;
+        document.getElementById('clearButton').classList.remove('active');
+
+        const phrase = samplePhrases[Math.floor(Math.random() * samplePhrases.length)];
+        const words = phrase.split(' and ').flatMap(w => w.split(' '));
+
+        currentWords = words;
+        blendedEmotionData = blendEmotions(words);
+        perlinNoise = new PerlinNoise();
+
+        const decodedWordsEl = document.getElementById('decodedWords');
+        decodedWordsEl.textContent = phrase;
+        decodedWordsEl.classList.add('active');
+
+        const wordTagsEl = document.getElementById('wordTags');
+        wordTagsEl.innerHTML = words
+          .filter(w => emotionWords[w.toLowerCase()])
+          .map(w => `<div class="word-tag">${w}</div>`)
+          .join('');
+
+        button.classList.remove('listening');
+        button.textContent = 'Decode Speech';
+      }, 800);
+    });
+
+    // Clear button - privacy mode (turns canvas black)
+    document.getElementById('clearButton').addEventListener('click', () => {
+      isCleared = !isCleared;
+      document.getElementById('clearButton').classList.toggle('active');
+
+      if (isCleared) {
+        document.getElementById('clearButton').textContent = 'Private Mode Active';
+      } else {
+        document.getElementById('clearButton').textContent = 'Clear';
+      }
+    });
+
+    // Intensity slider
+    document.getElementById('intensity').addEventListener('input', (e) => {
+      intensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = intensity;
+    });
+  </script>
+</body>
+</html>

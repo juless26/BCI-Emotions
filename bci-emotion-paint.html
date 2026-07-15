@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCI Expression — Emotion & Imagination</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .control-panel {
+      width: 320px;
+      background: rgba(5, 5, 5, 0.98);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #e0e0e0;
+      line-height: 1.5;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: #999;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .mode-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #bbb;
+    }
+
+    .mode-tab.active {
+      background: #1a5f99;
+      border-color: #2d8fc9;
+      color: #ffffff;
+    }
+
+    .mode-content {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mode-content.active {
+      display: flex;
+    }
+
+    .decode-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .paint-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+    }
+
+    .text-input::placeholder {
+      color: #666;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: #2d8fc9;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .action-button {
+      padding: 12px;
+      background: #1a5f99;
+      border: 2px solid #2d8fc9;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .action-button:hover {
+      background: #2d8fc9;
+      border-color: #4da6d6;
+    }
+
+    .action-button.listening {
+      background: rgba(255, 100, 100, 0.2);
+      border-color: rgba(255, 100, 100, 0.5);
+      color: #ff9999;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .output-display {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 50px;
+      font-size: 13px;
+      color: #ffffff;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .output-display.active {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .word-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .word-tag {
+      display: inline-block;
+      padding: 5px 8px;
+      background: #1a5f99;
+      border: 1px solid #2d8fc9;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .intensity-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .intensity-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .intensity-slider {
+      width: 100%;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .intensity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-webkit-slider-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-moz-range-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-display {
+      font-size: 12px;
+      color: #e0e0e0;
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .privacy-button {
+      padding: 10px;
+      background: #664d4d;
+      border: 1px solid #8b6666;
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .privacy-button:hover {
+      background: #8b6666;
+      border-color: #a67c7c;
+      color: #ffffff;
+    }
+
+    .privacy-button.active {
+      background: #1a1a1a;
+      border-color: #444;
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-area">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="control-panel">
+      <div class="header">
+        <h2>Light Space</h2>
+        <p>Expression & Imagination</p>
+      </div>
+
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="emotion">Express Emotion</button>
+        <button class="mode-tab" data-mode="paint">Paint Picture</button>
+      </div>
+
+      <!-- Emotion Mode -->
+      <div class="mode-content active" id="emotion-mode">
+        <div class="decode-section">
+          <button class="action-button" id="decodeButton">Decode Speech</button>
+          <div class="output-display" id="emotionOutput">Awaiting input...</div>
+          <div class="word-tags" id="emotionTags"></div>
+        </div>
+      </div>
+
+      <!-- Paint Mode -->
+      <div class="mode-content" id="paint-mode">
+        <div class="paint-section">
+          <textarea class="text-input" id="paintInput" placeholder="Describe: birds nesting in nature, peaceful wind..." rows="3"></textarea>
+          <button class="action-button" id="paintButton">Paint Picture</button>
+          <div class="output-display" id="paintOutput">Your vision awaits...</div>
+        </div>
+      </div>
+
+      <div class="intensity-section">
+        <label class="intensity-label">Intensity</label>
+        <input type="range" id="intensity" class="intensity-slider" min="1" max="5" value="3">
+        <div class="intensity-display"><span id="intensityValue">3</span> / 5</div>
+      </div>
+
+      <div class="intensity-section">
+        <label class="intensity-label">Realism</label>
+        <input type="range" id="realism" class="intensity-slider" min="1" max="5" value="3">
+        <div class="intensity-display"><span id="realismValue">3</span> / 5 (Photo ← → Paint)</div>
+      </div>
+
+      <button class="privacy-button" id="privacyButton">Privacy Mode</button>
+
+      <div class="info-box">
+        <strong>Emotion:</strong> Decode speech to express current feelings with color and light.<br><br>
+        <strong>Paint:</strong> Describe imagery to create visual art from imagination.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Perlin noise
+    class PerlinNoise {
+      constructor(seed = Math.random()) {
+        this.permutation = [];
+        for (let i = 0; i < 256; i++) {
+          this.permutation[i] = Math.floor(Math.random() * 256);
+        }
+        this.p = [...this.permutation, ...this.permutation];
+      }
+
+      fade(t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+      }
+
+      lerp(t, a, b) {
+        return a + t * (b - a);
+      }
+
+      grad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 8 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      noise(x, y) {
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+
+        const aa = this.p[this.p[xi] + yi];
+        const ba = this.p[this.p[xi + 1] + yi];
+        const ab = this.p[this.p[xi] + yi + 1];
+        const bb = this.p[this.p[xi + 1] + yi + 1];
+
+        const x1 = this.lerp(u, this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf));
+        const x2 = this.lerp(u, this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1));
+
+        return this.lerp(v, x1, x2);
+      }
+    }
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let animationId;
+    let perlinNoise = new PerlinNoise();
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth - 320;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Emotion word library
+    const emotionWords = {
+      calm: { colors: ['#E0F2F7', '#87CEEB', '#4A90E2'], arousal: 0.2, valence: 0.7, flowSpeed: 0.15 },
+      cool: { colors: ['#D4E6F1', '#5DADE2', '#2E86C1'], arousal: 0.25, valence: 0.65, flowSpeed: 0.2 },
+      peaceful: { colors: ['#F5F0FF', '#E6D5F0', '#D4A5D4'], arousal: 0.05, valence: 0.85, flowSpeed: 0.05 },
+      serene: { colors: ['#E8F8F5', '#A3E4D7', '#52BE80'], arousal: 0.1, valence: 0.8, flowSpeed: 0.1 },
+      happy: { colors: ['#FFF8DC', '#FFD700', '#FFA500'], arousal: 0.75, valence: 0.95, flowSpeed: 0.7 },
+      joyful: { colors: ['#FFFACD', '#FFD700', '#FF8C00'], arousal: 0.8, valence: 0.9, flowSpeed: 0.75 },
+      content: { colors: ['#FFFEF0', '#F9E79F', '#F4D03F'], arousal: 0.5, valence: 0.85, flowSpeed: 0.4 },
+      hopeful: { colors: ['#FCF3CF', '#F9E79F', '#F8C471'], arousal: 0.6, valence: 0.8, flowSpeed: 0.5 },
+      anxious: { colors: ['#330000', '#8B0000', '#DC143C'], arousal: 0.9, valence: 0.2, flowSpeed: 1.3 },
+      restless: { colors: ['#5D1F1A', '#A93226', '#E74C3C'], arousal: 0.85, valence: 0.3, flowSpeed: 1.2 },
+      tense: { colors: ['#4A1F1F', '#922B21', '#C0392B'], arousal: 0.8, valence: 0.25, flowSpeed: 1.0 },
+      overwhelmed: { colors: ['#1C0000', '#6C3483', '#AF7AC5'], arousal: 0.95, valence: 0.15, flowSpeed: 1.5 },
+      energized: { colors: ['#FF1493', '#FF6347', '#FFD700'], arousal: 0.9, valence: 0.85, flowSpeed: 1.2 },
+      vibrant: { colors: ['#FF69B4', '#FF1493', '#FF6347'], arousal: 0.88, valence: 0.8, flowSpeed: 1.15 },
+      inspired: { colors: ['#7B68EE', '#FF69B4', '#FFD700'], arousal: 0.75, valence: 0.8, flowSpeed: 0.95 },
+      sad: { colors: ['#1F618D', '#2E86AB', '#5D80A0'], arousal: 0.3, valence: 0.2, flowSpeed: 0.25 },
+      melancholy: { colors: ['#2C3E50', '#34495E', '#566573'], arousal: 0.35, valence: 0.3, flowSpeed: 0.3 }
+    };
+
+    // Semantic word analysis for paint mode
+    const colorKeywords = {
+      'golden|gold|yellow|bright|light|sun|sunshine': ['#FFD700', '#FFA500', '#FF8C00'],
+      'red|crimson|scarlet|fire|hot': ['#DC143C', '#FF6347', '#8B0000'],
+      'blue|sky|ocean|water|cool': ['#87CEEB', '#4A90E2', '#2E86C1'],
+      'green|nature|forest|trees|earth': ['#2D5016', '#52B788', '#40916C'],
+      'purple|violet|royal|majestic': ['#7B68EE', '#9932CC', '#8B008B'],
+      'pink|rose|soft|gentle': ['#FFB6C1', '#FFC0CB', '#FFDAB9'],
+      'gray|grey|silver|steel|metal': ['#808080', '#A9A9A9', '#D3D3D3'],
+      'black|dark|shadow|night|void': ['#1a1a1a', '#2f2f2f', '#404040'],
+      'white|pure|clean|fresh': ['#FFFACD', '#FFFFE0', '#F0E68C']
+    };
+
+    const arousalKeywords = {
+      'calm|peaceful|serene|still|quiet|gentle|soft': 0.1,
+      'quiet|slow|lazy|dreamy|hazy': 0.2,
+      'moderate|normal|balanced|steady': 0.5,
+      'active|vibrant|dynamic|flowing|moving': 0.7,
+      'intense|turbulent|chaotic|wild|storm|violent|rage|fury|aggressive': 0.9
+    };
+
+    const flowKeywords = {
+      'still|frozen|motionless|static': 0.05,
+      'gentle|soft|slow|peaceful|calm|quiet': 0.2,
+      'flowing|drift|breeze|wind|wave': 0.5,
+      'dynamic|energetic|swirling|rushing|flowing|turbulent': 0.8,
+      'chaotic|violent|frantic|wild|turbulent|storm': 0.95
+    };
+
+    const samplePhrases = [
+      'calm and cool',
+      'peaceful',
+      'anxious but hopeful',
+      'energized and inspired',
+      'content',
+      'overwhelmed and restless',
+      'joyful',
+      'calm and peaceful',
+      'energized',
+      'sad and melancholy'
+    ];
+
+    let currentMode = 'emotion';
+    let currentEmotionData = null;
+    let currentPaintData = null;
+    let intensity = 3;
+    let realism = 3;
+    let isPrivate = false;
+    let generatedImageUrl = null;
+
+    // Mode switching
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const mode = tab.dataset.mode;
+        currentMode = mode;
+
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById(`${mode}-mode`).classList.add('active');
+      });
+    });
+
+    function blendEmotions(words) {
+      const validWords = words.filter(w => emotionWords[w.toLowerCase()]);
+      if (validWords.length === 0) return null;
+
+      let blended = { colors: [], arousal: 0, valence: 0, flowSpeed: 0 };
+
+      validWords.forEach((word, idx) => {
+        const data = emotionWords[word.toLowerCase()];
+        blended.colors.push(...data.colors);
+        blended.arousal += data.arousal;
+        blended.valence += data.valence;
+        blended.flowSpeed += data.flowSpeed;
+      });
+
+      blended.arousal /= validWords.length;
+      blended.valence /= validWords.length;
+      blended.flowSpeed /= validWords.length;
+      blended.colors = [...new Set(blended.colors)].slice(0, 3);
+
+      return blended;
+    }
+
+    function analyzeImagery(text) {
+      const lowerText = text.toLowerCase();
+      let colors = [];
+      let arousalScores = [];
+      let flowScores = [];
+
+      // Analyze colors from keywords
+      for (const [keywords, colorPalette] of Object.entries(colorKeywords)) {
+        const keywordList = keywords.split('|');
+        if (keywordList.some(kw => lowerText.includes(kw))) {
+          colors.push(...colorPalette);
+        }
+      }
+
+      // Analyze arousal from keywords
+      for (const [keywords, score] of Object.entries(arousalKeywords)) {
+        const keywordList = keywords.split('|');
+        if (keywordList.some(kw => lowerText.includes(kw))) {
+          arousalScores.push(score);
+        }
+      }
+
+      // Analyze flow from keywords
+      for (const [keywords, score] of Object.entries(flowKeywords)) {
+        const keywordList = keywords.split('|');
+        if (keywordList.some(kw => lowerText.includes(kw))) {
+          flowScores.push(score);
+        }
+      }
+
+      // Default values if nothing matched
+      if (colors.length === 0) {
+        colors = ['#87CEEB', '#FFB6C1', '#98D8C8'];
+      }
+      if (arousalScores.length === 0) {
+        arousalScores = [0.5];
+      }
+      if (flowScores.length === 0) {
+        flowScores = [0.4];
+      }
+
+      // Average the scores
+      let avgArousal = arousalScores.reduce((a, b) => a + b, 0) / arousalScores.length;
+      let avgFlow = flowScores.reduce((a, b) => a + b, 0) / flowScores.length;
+
+      // Paint mode should always have some visible motion - boost minimums
+      avgArousal = Math.max(avgArousal, 0.3);
+      avgFlow = Math.max(avgFlow, 0.25);
+
+      // Get unique colors, limit to 3
+      const uniqueColors = [...new Set(colors)].slice(0, 3);
+
+      return {
+        colors: uniqueColors.length > 0 ? uniqueColors : colors.slice(0, 3),
+        arousal: avgArousal,
+        flowSpeed: avgFlow,
+        hasParticles: true
+      };
+    }
+
+    function drawLightSpace(time, data, intensity) {
+      const t = time * 0.0001 * (data.flowSpeed || 0.3);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      const colors = data.colors;
+      if (colors.length === 1) {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[0]);
+      } else if (colors.length === 2) {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+      } else {
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(0.5, colors[1]);
+        gradient.addColorStop(1, colors[2]);
+      }
+
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.7 + (intensity / 5) * 0.3;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+
+      ctx.globalAlpha = 0.25 + (intensity / 5) * 0.4;
+      const resolution = Math.max(2, 8 - Math.floor(intensity * 1.5));
+      const scale = 80 + (data.arousal || 0.5) * 40;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 0.5 + intensity * 0.4;
+
+      for (let y = 0; y < canvas.height; y += resolution) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += resolution) {
+          const noiseVal = perlinNoise.noise(x / scale + t, y / scale + t * 0.7 + (data.arousal || 0.5) * 10);
+          const offsetY = y + noiseVal * 50 * (data.arousal || 0.5) * intensity;
+          if (x === 0) ctx.moveTo(x, offsetY);
+          else ctx.lineTo(x, offsetY);
+        }
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.2 + (intensity / 5) * 0.2;
+      const lineCount = 8 + intensity * 2;
+      for (let i = 0; i < lineCount; i++) {
+        const x = (canvas.width / lineCount) * i;
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 20) {
+          const noiseVal = perlinNoise.noise(x / scale * 0.5 + t * 0.5, y / scale + t * (data.flowSpeed || 0.3));
+          const offsetX = x + noiseVal * 60 * (data.arousal || 0.5);
+          if (y === 0) ctx.moveTo(offsetX, y);
+          else ctx.lineTo(offsetX, y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.3 * (intensity / 5) * 1.2;
+      const radialGradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height));
+      const glowStrength = 0.15 + (intensity / 5) * 0.35;
+      radialGradient.addColorStop(0, `rgba(255, 255, 255, ${glowStrength})`);
+      radialGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+      radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = radialGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.globalAlpha = 1;
+    }
+
+    function animate(time) {
+      if (isPrivate) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (currentEmotionData || currentPaintData) {
+        const data = currentEmotionData || currentPaintData;
+        drawLightSpace(time, data, intensity);
+
+        // If we have a generated image, blend it based on realism slider
+        if (generatedImageUrl && currentMode === 'paint') {
+          const img = new Image();
+          img.onload = function() {
+            const imageOpacity = realism / 5;
+            ctx.globalAlpha = imageOpacity;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+          };
+          img.src = generatedImageUrl;
+        }
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#555';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.4;
+        if (currentMode === 'emotion') {
+          ctx.fillText('Click "Decode Speech"', canvas.width / 2, canvas.height / 2 - 10);
+          ctx.fillText('to express emotion', canvas.width / 2, canvas.height / 2 + 10);
+        } else {
+          ctx.fillText('Describe imagery', canvas.width / 2, canvas.height / 2 - 10);
+          ctx.fillText('and paint a picture', canvas.width / 2, canvas.height / 2 + 10);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      animationId = requestAnimationFrame(animate);
+    }
+    animate(0);
+
+    // Emotion mode
+    document.getElementById('decodeButton').addEventListener('click', () => {
+      const button = document.getElementById('decodeButton');
+      button.classList.add('listening');
+      button.textContent = 'Listening...';
+
+      setTimeout(() => {
+        const phrase = samplePhrases[Math.floor(Math.random() * samplePhrases.length)];
+        const words = phrase.split(' and ').flatMap(w => w.split(' '));
+
+        currentEmotionData = blendEmotions(words);
+        currentPaintData = null;
+        perlinNoise = new PerlinNoise();
+
+        const output = document.getElementById('emotionOutput');
+        output.textContent = phrase;
+        output.classList.add('active');
+
+        const tags = document.getElementById('emotionTags');
+        tags.innerHTML = words.filter(w => emotionWords[w.toLowerCase()]).map(w => `<div class="word-tag">${w}</div>`).join('');
+
+        button.classList.remove('listening');
+        button.textContent = 'Decode Speech';
+      }, 800);
+    });
+
+    // Paint mode with Replicate API
+    const REPLICATE_TOKEN = 'r8_YsTELgGRqqkN060q23bhouIOEJ4KzUC1H4ZMZ';
+
+    async function generateImageWithReplicate(prompt, realismLevel) {
+      const button = document.getElementById('paintButton');
+      button.disabled = true;
+      button.textContent = 'Generating... (may take 20-30 sec)';
+
+      try {
+        // Adjust prompt based on realism level
+        let adjustedPrompt = prompt;
+        if (realismLevel <= 2) {
+          adjustedPrompt += ', impressionistic oil painting, loose brushstrokes, artistic style';
+        } else if (realismLevel >= 4) {
+          adjustedPrompt += ', photorealistic, professional photography, highly detailed, sharp focus';
+        } else {
+          adjustedPrompt += ', detailed artistic rendering, balanced realism';
+        }
+
+        // Call Replicate API with authentication
+        const response = await fetch('https://api.replicate.com/v1/predictions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${REPLICATE_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            version: 'db21e45d3f7023abc9a0ff02a1e0c27735ca5eda44f3382a41e4161822ad4ae3',
+            input: {
+              prompt: adjustedPrompt,
+              num_outputs: 1,
+              image_dimensions: '768x768'
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to call Replicate API - may need authentication token');
+        }
+
+        const data = await response.json();
+        const predictionId = data.id;
+
+        // Poll for result
+        let prediction = data;
+        while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`);
+          prediction = await statusResponse.json();
+        }
+
+        if (prediction.status === 'succeeded' && prediction.output && prediction.output[0]) {
+          generatedImageUrl = prediction.output[0];
+          const output = document.getElementById('paintOutput');
+          output.textContent = prompt + ' ✓ Image generated';
+          output.classList.add('active');
+        } else {
+          throw new Error('Image generation failed');
+        }
+      } catch (error) {
+        console.error('Replicate API error:', error);
+        console.error('Error details:', error.message);
+        document.getElementById('paintOutput').textContent = 'Image generation unavailable. Using abstract visualization. Check browser console for details.';
+        currentPaintData = analyzeImagery(prompt);
+        currentEmotionData = null;
+      }
+
+      button.disabled = false;
+      button.textContent = 'Paint Picture';
+    }
+
+    document.getElementById('paintButton').addEventListener('click', () => {
+      const text = document.getElementById('paintInput').value;
+      if (!text.trim()) return;
+
+      currentPaintData = analyzeImagery(text);
+      currentEmotionData = null;
+      perlinNoise = new PerlinNoise();
+
+      generateImageWithReplicate(text, realism);
+    });
+
+    // Intensity
+    document.getElementById('intensity').addEventListener('input', (e) => {
+      intensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = intensity;
+    });
+
+    // Realism slider
+    document.getElementById('realism').addEventListener('input', (e) => {
+      realism = parseInt(e.target.value);
+      document.getElementById('realismValue').textContent = realism;
+    });
+
+    // Privacy
+    document.getElementById('privacyButton').addEventListener('click', () => {
+      isPrivate = !isPrivate;
+      document.getElementById('privacyButton').classList.toggle('active');
+      document.getElementById('privacyButton').textContent = isPrivate ? 'Private Mode Active' : 'Privacy Mode';
+    });
+  </script>
+</body>
+</html>

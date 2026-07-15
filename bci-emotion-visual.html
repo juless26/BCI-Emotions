@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCI Emotion Visual Expression</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      gap: 0;
+    }
+
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .control-panel {
+      width: 280px;
+      background: rgba(20, 20, 20, 0.95);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .emotion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .emotion-btn {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #aaa;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .emotion-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .emotion-btn.active {
+      border-color: currentColor;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .intensity-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .intensity-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .intensity-slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .intensity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .intensity-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .intensity-display {
+      font-size: 13px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    .info-box {
+      background: rgba(100, 150, 200, 0.1);
+      border: 1px solid rgba(100, 150, 200, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #aaa;
+    }
+
+    .status {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-area">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="control-panel">
+      <div class="header">
+        <h2>BCI Emotion</h2>
+        <p>Speech-Decoded Expression</p>
+      </div>
+
+      <div>
+        <div class="intensity-label">Select Emotion</div>
+        <div class="emotion-grid">
+          <button class="emotion-btn" data-emotion="happy">😊 Happy</button>
+          <button class="emotion-btn" data-emotion="calm">🧘 Calm</button>
+          <button class="emotion-btn" data-emotion="anxious">😰 Anxious</button>
+          <button class="emotion-btn" data-emotion="peaceful">✨ Peaceful</button>
+          <button class="emotion-btn" data-emotion="inspired">🚀 Inspired</button>
+          <button class="emotion-btn" data-emotion="energized">⚡ Energized</button>
+        </div>
+      </div>
+
+      <div class="intensity-section">
+        <label class="intensity-label">Intensity</label>
+        <input type="range" id="intensity" class="intensity-slider" min="1" max="5" value="3">
+        <div class="intensity-display"><span id="intensityValue">3</span> / 5</div>
+      </div>
+
+      <div class="info-box">
+        <strong>How it works:</strong> This interface simulates how a BCI speech decoder would translate thought-to-speech into emotional expression. Colors and patterns reflect psychological research on color-emotion associations.
+      </div>
+
+      <div class="status" id="status">
+        Ready. Select an emotion.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let animationId;
+
+    // Set canvas size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth - 280;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Color psychology mappings
+    const emotionData = {
+      happy: {
+        colors: ['#FFD700', '#FFA500', '#FFE66D'],
+        description: 'Bright, energetic, high saturation',
+        arousal: 0.8,
+        valence: 0.9
+      },
+      calm: {
+        colors: ['#4A90E2', '#67B26F', '#87CEEB'],
+        description: 'Cool, desaturated, peaceful',
+        arousal: 0.2,
+        valence: 0.7
+      },
+      anxious: {
+        colors: ['#C73E1D', '#8B0000', '#DC143C'],
+        description: 'Dark red, high saturation, tense',
+        arousal: 0.9,
+        valence: 0.2
+      },
+      peaceful: {
+        colors: ['#B19CD9', '#DDA0DD', '#E6B3E6'],
+        description: 'Soft purple, low saturation',
+        arousal: 0.1,
+        valence: 0.8
+      },
+      inspired: {
+        colors: ['#7B68EE', '#FF6347', '#FFD700'],
+        description: 'Mixed vibrant, creative energy',
+        arousal: 0.7,
+        valence: 0.8
+      },
+      energized: {
+        colors: ['#FF1493', '#FF6347', '#FFD700'],
+        description: 'Hot, saturated, high arousal',
+        arousal: 0.95,
+        valence: 0.85
+      }
+    };
+
+    let currentEmotion = null;
+    let intensity = 3;
+
+    // Pattern generation
+    function drawGenerativePattern(time, emotion, intensity) {
+      const arousal = emotionData[emotion].arousal;
+      const valence = emotionData[emotion].valence;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Base gradient
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      const colors = emotionData[emotion].colors;
+      gradient.addColorStop(0, colors[0]);
+      gradient.addColorStop(0.5, colors[1]);
+      gradient.addColorStop(1, colors[2]);
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Generate patterns based on emotion characteristics
+      ctx.globalAlpha = 0.3 + (intensity / 5) * 0.4;
+
+      const frequency = 2 + arousal * 8;
+      const waveAmplitude = 30 + intensity * 20;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 2;
+
+      // Wave patterns (valence affects direction/height)
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 5) {
+          const y = canvas.height / 2 +
+                    Math.sin((x * frequency + time) / 1000) * waveAmplitude +
+                    (valence * 50 - 25) +
+                    i * (canvas.height / 5);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Particle-like circles (intensity affects density)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      const particleCount = 10 + intensity * 5;
+
+      for (let i = 0; i < particleCount; i++) {
+        const x = (Math.sin(time / 2000 + i) * canvas.width / 2) + canvas.width / 2;
+        const y = (Math.cos(time / 3000 + i * 0.5) * canvas.height / 2) + canvas.height / 2;
+        const radius = 3 + Math.sin(time / 1000 + i) * 3;
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Animation loop
+    function animate(time) {
+      if (currentEmotion) {
+        drawGenerativePattern(time, currentEmotion, intensity);
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#444';
+        ctx.font = '16px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('Select an emotion to begin', canvas.width / 2, canvas.height / 2);
+      }
+
+      animationId = requestAnimationFrame(animate);
+    }
+    animate(0);
+
+    // Event listeners
+    document.querySelectorAll('.emotion-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentEmotion = btn.dataset.emotion;
+
+        const status = document.getElementById('status');
+        status.textContent = `${btn.textContent} • Intensity: ${intensity}/5 • ${emotionData[currentEmotion].description}`;
+      });
+    });
+
+    const intensitySlider = document.getElementById('intensity');
+    intensitySlider.addEventListener('input', (e) => {
+      intensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = intensity;
+
+      if (currentEmotion) {
+        const btn = document.querySelector(`[data-emotion="${currentEmotion}"]`);
+        const status = document.getElementById('status');
+        status.textContent = `${btn.textContent} • Intensity: ${intensity}/5 • ${emotionData[currentEmotion].description}`;
+      }
+    });
+  </script>
+</body>
+</html>

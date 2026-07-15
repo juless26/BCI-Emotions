@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCI Emotional Expression — Light Space</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .control-panel {
+      width: 260px;
+      background: rgba(5, 5, 5, 0.98);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .header h2 {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 11px;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    .emotion-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .emotion-btn {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      color: #777;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: left;
+    }
+
+    .emotion-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #999;
+    }
+
+    .emotion-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ddd;
+    }
+
+    .intensity-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .intensity-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: #555;
+      text-transform: uppercase;
+    }
+
+    .intensity-slider {
+      width: 100%;
+      height: 3px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .intensity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-webkit-slider-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .intensity-slider::-moz-range-thumb:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .intensity-display {
+      font-size: 10px;
+      color: #555;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 10px;
+      line-height: 1.5;
+      color: #666;
+    }
+
+    .status {
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 4px;
+      font-size: 9px;
+      color: #555;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .emotion-description {
+      font-size: 9px;
+      color: #555;
+      margin-top: 2px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-area">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="control-panel">
+      <div class="header">
+        <h2>Light Space</h2>
+        <p>Emotional Expression through Perception</p>
+      </div>
+
+      <div>
+        <div class="emotion-grid">
+          <button class="emotion-btn" data-emotion="happy">
+            Happy
+            <div class="emotion-description">Luminous ascension</div>
+          </button>
+          <button class="emotion-btn" data-emotion="calm">
+            Calm
+            <div class="emotion-description">Serene expansion</div>
+          </button>
+          <button class="emotion-btn" data-emotion="anxious">
+            Anxious
+            <div class="emotion-description">Turbulent undercurrent</div>
+          </button>
+          <button class="emotion-btn" data-emotion="peaceful">
+            Peaceful
+            <div class="emotion-description">Ethereal stillness</div>
+          </button>
+          <button class="emotion-btn" data-emotion="inspired">
+            Inspired
+            <div class="emotion-description">Creative emergence</div>
+          </button>
+          <button class="emotion-btn" data-emotion="energized">
+            Energized
+            <div class="emotion-description">Vigorous radiance</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="intensity-section">
+        <label class="intensity-label">Intensity</label>
+        <input type="range" id="intensity" class="intensity-slider" min="1" max="5" value="3">
+        <div class="intensity-display"><span id="intensityValue">3</span> / 5</div>
+      </div>
+
+      <div class="info-box">
+        Inspired by James Turrell's light installations. This space responds to your emotional state through color, flow, and luminosity—no representation, only perception.
+      </div>
+
+      <div class="status" id="status">
+        Ready
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Perlin noise implementation (simplified)
+    class PerlinNoise {
+      constructor(seed = Math.random()) {
+        this.permutation = [];
+        for (let i = 0; i < 256; i++) {
+          this.permutation[i] = Math.floor(Math.random() * 256);
+        }
+        this.p = [...this.permutation, ...this.permutation];
+      }
+
+      fade(t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+      }
+
+      lerp(t, a, b) {
+        return a + t * (b - a);
+      }
+
+      grad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 8 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      noise(x, y) {
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+
+        const aa = this.p[this.p[xi] + yi];
+        const ba = this.p[this.p[xi + 1] + yi];
+        const ab = this.p[this.p[xi] + yi + 1];
+        const bb = this.p[this.p[xi + 1] + yi + 1];
+
+        const x1 = this.lerp(u, this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf));
+        const x2 = this.lerp(u, this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1));
+
+        return this.lerp(v, x1, x2);
+      }
+    }
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let animationId;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth - 260;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Emotion data with light-based properties
+    const emotionData = {
+      happy: {
+        baseColors: ['#FFF8DC', '#FFD700', '#FFA500'],
+        lightTemp: 'warm',
+        flowSpeed: 0.8,
+        arousal: 0.8,
+        valence: 0.95,
+        glowIntensity: 0.6,
+        noiseScale: 80
+      },
+      calm: {
+        baseColors: ['#E0F2F7', '#87CEEB', '#4A90E2'],
+        lightTemp: 'cool',
+        flowSpeed: 0.2,
+        arousal: 0.2,
+        valence: 0.75,
+        glowIntensity: 0.3,
+        noiseScale: 120
+      },
+      anxious: {
+        baseColors: ['#330000', '#8B0000', '#DC143C'],
+        lightTemp: 'warm-dark',
+        flowSpeed: 1.5,
+        arousal: 0.95,
+        valence: 0.15,
+        glowIntensity: 0.8,
+        noiseScale: 40
+      },
+      peaceful: {
+        baseColors: ['#F5F0FF', '#E6D5F0', '#D4A5D4'],
+        lightTemp: 'cool-soft',
+        flowSpeed: 0.05,
+        arousal: 0.05,
+        valence: 0.85,
+        glowIntensity: 0.2,
+        noiseScale: 180
+      },
+      inspired: {
+        baseColors: ['#4B0082', '#FF69B4', '#FFD700'],
+        lightTemp: 'mixed',
+        flowSpeed: 1.0,
+        arousal: 0.75,
+        valence: 0.8,
+        glowIntensity: 0.5,
+        noiseScale: 100
+      },
+      energized: {
+        baseColors: ['#FF1493', '#FF6347', '#FFD700'],
+        lightTemp: 'hot',
+        flowSpeed: 1.3,
+        arousal: 0.95,
+        valence: 0.85,
+        glowIntensity: 0.7,
+        noiseScale: 60
+      }
+    };
+
+    let currentEmotion = null;
+    let intensity = 3;
+    let perlinNoise = new PerlinNoise();
+
+    function drawLightSpace(time, emotion, intensity) {
+      const data = emotionData[emotion];
+      const t = time * 0.0001 * data.flowSpeed;
+
+      // Clear with slight fade for motion blur
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Create base gradient with intensity affecting saturation
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+
+      // Higher intensity = more saturated colors
+      const intensityFactor = 0.4 + (intensity / 5) * 0.6;
+      gradient.addColorStop(0, data.baseColors[0]);
+      gradient.addColorStop(0.5, data.baseColors[1]);
+      gradient.addColorStop(1, data.baseColors[2]);
+
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.7 + (intensity / 5) * 0.3;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+
+      // Draw organic flowing forms using Perlin noise
+      // Intensity directly controls visibility of flowing forms
+      ctx.globalAlpha = 0.15 + (intensity / 5) * 0.5;
+
+      const resolution = Math.max(2, 8 - Math.floor(intensity * 1.5));
+      const scale = data.noiseScale;
+
+      // Intensity affects line prominence
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 0.3 + intensity * 0.5;
+
+      for (let y = 0; y < canvas.height; y += resolution) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += resolution) {
+          const noiseVal = perlinNoise.noise(
+            x / scale + t,
+            y / scale + t * 0.7 + data.arousal * 10
+          );
+          const offsetY = y + noiseVal * 50 * data.arousal * intensity;
+          if (x === 0) ctx.moveTo(x, offsetY);
+          else ctx.lineTo(x, offsetY);
+        }
+        ctx.stroke();
+      }
+
+      // Vertical flowing lines (directional based on arousal/valence)
+      ctx.globalAlpha = 0.2 + (intensity / 5) * 0.2;
+      const lineCount = 8 + intensity * 2;
+      for (let i = 0; i < lineCount; i++) {
+        const x = (canvas.width / lineCount) * i;
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 20) {
+          const noiseVal = perlinNoise.noise(
+            x / scale * 0.5 + t * 0.5,
+            y / scale + t * data.flowSpeed
+          );
+          const offsetX = x + noiseVal * 60 * data.arousal;
+          if (y === 0) ctx.moveTo(offsetX, y);
+          else ctx.lineTo(offsetX, y);
+        }
+        ctx.stroke();
+      }
+
+      // Radiant glow from center (intensity-dependent)
+      // Glow is more prominent at high intensity, subtle at low
+      ctx.globalAlpha = data.glowIntensity * (intensity / 5) * 1.2;
+      const radialGradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 0,
+        canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height)
+      );
+      const glowStrength = 0.15 + (intensity / 5) * 0.35;
+      radialGradient.addColorStop(0, `rgba(255, 255, 255, ${glowStrength})`);
+      radialGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+      radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = radialGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.globalAlpha = 1;
+    }
+
+    function animate(time) {
+      if (currentEmotion) {
+        drawLightSpace(time, currentEmotion, intensity);
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#333';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.5;
+        ctx.fillText('Select an emotional state', canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillText('to enter the light space', canvas.width / 2, canvas.height / 2 + 10);
+        ctx.globalAlpha = 1;
+      }
+
+      animationId = requestAnimationFrame(animate);
+    }
+    animate(0);
+
+    // Event listeners
+    document.querySelectorAll('.emotion-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentEmotion = btn.dataset.emotion;
+
+        const status = document.getElementById('status');
+        const emotionName = btn.textContent.split('\n')[0];
+        status.textContent = emotionName.toUpperCase() + ' • Intensity ' + intensity + '/5';
+
+        perlinNoise = new PerlinNoise();
+      });
+    });
+
+    const intensitySlider = document.getElementById('intensity');
+    intensitySlider.addEventListener('input', (e) => {
+      intensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = intensity;
+
+      if (currentEmotion) {
+        const btn = document.querySelector(`[data-emotion="${currentEmotion}"]`);
+        const emotionName = btn.textContent.split('\n')[0];
+        const status = document.getElementById('status');
+        status.textContent = emotionName.toUpperCase() + ' • Intensity ' + intensity + '/5';
+      }
+    });
+  </script>
+</body>
+</html>

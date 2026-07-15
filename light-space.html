@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Light Space — BCI Expression</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* SVG Ambient Background for Inspired */
+    .ambient-svg-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+      z-index: 1;
+    }
+
+    .ambient-svg-container.active {
+      opacity: 1;
+    }
+
+    .ambient-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* True fluid morphing with displacement filter */
+    .filter-group {
+      filter: url(#distortion-filter) url(#ambient-blur);
+    }
+
+    .circle-1 {
+      fill: #6366f1;
+      opacity: 0.6;
+      animation: driftOne 24s ease-in-out infinite alternate;
+    }
+
+    .circle-2 {
+      fill: #06b6d4;
+      opacity: 0.5;
+      animation: driftTwo 18s ease-in-out infinite alternate;
+    }
+
+    .circle-3 {
+      fill: #10b981;
+      opacity: 0.4;
+      animation: driftThree 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes driftOne {
+      0% { transform: translate(100px, 100px) scale(1); }
+      100% { transform: translate(400px, 300px) scale(1.3); }
+    }
+
+    @keyframes driftTwo {
+      0% { transform: translate(600px, 500px) scale(1.2); }
+      100% { transform: translate(200px, 200px) scale(0.8); }
+    }
+
+    @keyframes driftThree {
+      0% { transform: translate(400px, 600px) scale(0.9); }
+      100% { transform: translate(700px, 100px) scale(1.1); }
+    }
+
+    .control-panel {
+      width: 320px;
+      background: rgba(10, 10, 10, 0.95);
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      overflow-y: auto;
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #aaaaaa;
+      line-height: 1.5;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: #888888;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .mode-tab:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+    }
+
+    .mode-tab.active {
+      background: rgba(100, 150, 220, 0.2);
+      border-color: rgba(100, 150, 220, 0.5);
+      color: #ffffff;
+    }
+
+    .mode-content {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mode-content.active {
+      display: flex;
+    }
+
+    .emotion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .emotion-btn {
+      padding: 12px 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      color: #aaaaaa;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .emotion-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    .emotion-btn.active {
+      background: rgba(100, 150, 220, 0.25);
+      border-color: rgba(100, 150, 220, 0.6);
+      color: #ffffff;
+    }
+
+    .input-field {
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .input-field::placeholder {
+      color: #666666;
+    }
+
+    .input-field:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(100, 150, 220, 0.5);
+    }
+
+    .button {
+      padding: 12px 16px;
+      background: rgba(100, 150, 220, 0.3);
+      border: 1px solid rgba(100, 150, 220, 0.6);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .button:hover {
+      background: rgba(100, 150, 220, 0.5);
+      border-color: rgba(100, 150, 220, 0.8);
+    }
+
+    .button:active {
+      background: rgba(100, 150, 220, 0.4);
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .slider-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #888888;
+      letter-spacing: 0.5px;
+    }
+
+    .slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(100, 150, 220, 0.7);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      background: rgba(100, 150, 220, 0.9);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(100, 150, 220, 0.7);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .slider::-moz-range-thumb:hover {
+      background: rgba(100, 150, 220, 0.9);
+    }
+
+    .slider-value {
+      font-size: 12px;
+      color: #aaaaaa;
+      text-align: center;
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #888888;
+    }
+
+    .status {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+      font-size: 10px;
+      color: #666666;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .privacy-btn {
+      padding: 12px 16px;
+      background: rgba(200, 100, 100, 0.2);
+      border: 1px solid rgba(200, 100, 100, 0.5);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .privacy-btn:hover {
+      background: rgba(200, 100, 100, 0.35);
+      border-color: rgba(200, 100, 100, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="canvas-area">
+      <!-- Ambient SVG Background for Inspired - True Fluid Morphing -->
+      <div class="ambient-svg-container" id="ambient-bg">
+        <svg class="ambient-svg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Distortion filter: Bends shapes into organic fluid morphing -->
+            <filter id="distortion-filter">
+              <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="3" result="noise">
+                <animate attributeName="baseFrequency" values="0.01; 0.025; 0.01" dur="30s" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="200" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+            <!-- Blur filter for soft appearance -->
+            <filter id="ambient-blur">
+              <feGaussianBlur stdDeviation="50" />
+            </filter>
+          </defs>
+          <!-- Apply both filters to create true fluid morphing -->
+          <g class="filter-group">
+            <rect width="1000" height="800" fill="#0b0d19" />
+            <circle class="circle-1" cx="200" cy="200" r="200" />
+            <circle class="circle-2" cx="700" cy="500" r="240" />
+            <circle class="circle-3" cx="400" cy="600" r="180" />
+          </g>
+        </svg>
+      </div>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="control-panel">
+      <div class="header">
+        <h1>Light Space</h1>
+        <p>Expression & Imagination</p>
+      </div>
+
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="emotion">Emotion</button>
+        <button class="mode-tab" data-mode="paint">Paint</button>
+      </div>
+
+      <!-- EMOTION MODE -->
+      <div class="mode-content active" id="emotion-mode">
+        <div class="emotion-grid" id="emotionGrid"></div>
+      </div>
+
+      <!-- PAINT MODE -->
+      <div class="mode-content" id="paint-mode">
+        <textarea class="input-field" id="paintInput" placeholder="Describe imagery..." rows="3"></textarea>
+        <button class="button" id="paintBtn">Paint Picture</button>
+      </div>
+
+      <!-- SHARED CONTROLS -->
+      <div class="slider-group">
+        <label class="slider-label">Intensity</label>
+        <input type="range" class="slider" id="intensitySlider" min="1" max="5" value="3">
+        <div class="slider-value"><span id="intensityValue">3</span> / 5</div>
+      </div>
+
+      <div class="slider-group">
+        <label class="slider-label">Realism</label>
+        <input type="range" class="slider" id="realismSlider" min="1" max="5" value="3">
+        <div class="slider-value"><span id="realismValue">3</span> / 5 (Photo ← → Paint)</div>
+      </div>
+
+      <button class="privacy-btn" id="privacyBtn">Privacy Mode</button>
+
+      <div class="info-box">
+        <strong>Emotion:</strong> Decode emotional words to express feelings through color and light.<br><br>
+        <strong>Paint:</strong> Describe imagery to create visual art from imagination.
+      </div>
+
+      <div class="status" id="status">Ready</div>
+    </div>
+  </div>
+
+  <script>
+    // Perlin noise
+    class PerlinNoise {
+      constructor(seed = Math.random()) {
+        this.seed = seed;
+        this.permutation = [];
+
+        // Seeded random number generator (simple LCG)
+        const seededRandom = (s) => {
+          const x = Math.sin(s) * 10000;
+          return x - Math.floor(x);
+        };
+
+        // Generate base permutation
+        for (let i = 0; i < 256; i++) {
+          this.permutation[i] = i;
+        }
+
+        // Shuffle using seeded random
+        for (let i = 255; i > 0; i--) {
+          const j = Math.floor(seededRandom(seed + i) * (i + 1));
+          [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
+        }
+
+        this.p = [...this.permutation, ...this.permutation];
+      }
+
+      fade(t) {
+        return t * t * t * (t * (t * 6 - 15) + 10);
+      }
+
+      lerp(t, a, b) {
+        return a + t * (b - a);
+      }
+
+      grad(hash, x, y) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 8 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      noise(x, y) {
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+
+        const u = this.fade(xf);
+        const v = this.fade(yf);
+
+        const aa = this.p[this.p[xi] + yi];
+        const ba = this.p[this.p[xi + 1] + yi];
+        const ab = this.p[this.p[xi] + yi + 1];
+        const bb = this.p[this.p[xi + 1] + yi + 1];
+
+        const x1 = this.lerp(u, this.grad(aa, xf, yf), this.grad(ba, xf - 1, yf));
+        const x2 = this.lerp(u, this.grad(ab, xf, yf - 1), this.grad(bb, xf - 1, yf - 1));
+
+        return this.lerp(v, x1, x2);
+      }
+    }
+
+    // Emotion data
+    const emotions = {
+      happy: { colors: ['#FFD700', '#FFA500', '#FFE66D'], arousal: 0.85, valence: 0.95 },
+      calm: { colors: ['#4A90E2', '#67B26F', '#87CEEB'], arousal: 0.15, valence: 0.75 },
+      anxious: { colors: ['#C73E1D', '#8B0000', '#DC143C'], arousal: 0.95, valence: 0.15 },
+      tired: { colors: ['#B19CD9', '#DDA0DD', '#E6B3E6'], arousal: 0.05, valence: 0.85 },
+      depressed: { colors: ['#7B68EE', '#FF6347', '#FFD700'], arousal: 0.75, valence: 0.8 },
+      energized: { colors: ['#FF1493', '#FF6347', '#FFD700'], arousal: 0.95, valence: 0.85 }
+    };
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentMode = 'emotion';
+    let currentEmotion = null;
+    let intensity = 3;
+    let realism = 3;
+    let privacyMode = false;
+    let perlinNoise = new PerlinNoise();
+    let generatedImageData = null;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth - 320;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Populate emotion buttons
+    Object.keys(emotions).forEach(emotion => {
+      const btn = document.createElement('button');
+      btn.className = 'emotion-btn';
+      btn.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+      btn.dataset.emotion = emotion;
+      btn.addEventListener('click', selectEmotion);
+      document.getElementById('emotionGrid').appendChild(btn);
+    });
+
+    function selectEmotion(e) {
+      if (currentMode !== 'emotion') return;
+      document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentEmotion = e.target.dataset.emotion;
+      generatedImageData = null;
+      updateStatus(`${currentEmotion.toUpperCase()} selected`);
+
+      // Toggle ambient SVG background for depressed emotion
+      const ambientBg = document.getElementById('ambient-bg');
+      if (currentEmotion === 'depressed') {
+        ambientBg.classList.add('active');
+      } else {
+        ambientBg.classList.remove('active');
+      }
+      // Seed Perlin noise differently for each emotion
+      perlinNoise = new PerlinNoise(currentEmotion.charCodeAt(0) + currentEmotion.charCodeAt(currentEmotion.length - 1));
+    }
+
+    // Mode switching
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        currentMode = tab.dataset.mode;
+
+        // Show correct mode content
+        if (currentMode === 'emotion') {
+          document.getElementById('emotion-mode').classList.add('active');
+        } else if (currentMode === 'paint') {
+          document.getElementById('paint-mode').classList.add('active');
+        }
+
+        currentEmotion = null;
+        generatedImageData = null;
+        document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+        updateStatus(`${currentMode} mode`);
+      });
+    });
+
+    // Call Netlify serverless function for image generation
+    async function generateImageFromBackend(prompt) {
+      try {
+        const response = await fetch('/.netlify/functions/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt, realism })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Server error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.image; // base64 data URL
+      } catch (err) {
+        console.error('Backend error:', err);
+        throw err;
+      }
+    }
+
+    // Paint button - generates image from backend
+    document.getElementById('paintBtn').addEventListener('click', async () => {
+      const prompt = document.getElementById('paintInput').value.trim();
+      if (!prompt) {
+        updateStatus('Describe imagery...');
+        return;
+      }
+
+      updateStatus('Generating image... (20-60 sec)');
+      document.getElementById('paintBtn').disabled = true;
+
+      try {
+        const imageDataUrl = await generateImageFromBackend(prompt);
+
+        // Load the image
+        const img = new Image();
+        img.onload = () => {
+          generatedImageData = img;
+          currentEmotion = null;
+          window.paintStyle = null;
+          updateStatus(`"${prompt}" ✓`);
+        };
+        img.onerror = () => {
+          updateStatus('Image failed to load');
+        };
+        img.src = imageDataUrl;
+      } catch (err) {
+        console.error('Paint error:', err);
+        updateStatus('Error: ' + err.message);
+      }
+
+      document.getElementById('paintBtn').disabled = false;
+    });
+
+    // Sliders
+    document.getElementById('intensitySlider').addEventListener('input', (e) => {
+      intensity = parseInt(e.target.value);
+      document.getElementById('intensityValue').textContent = intensity;
+    });
+
+    document.getElementById('realismSlider').addEventListener('input', (e) => {
+      realism = parseInt(e.target.value);
+      document.getElementById('realismValue').textContent = realism;
+    });
+
+    // Privacy
+    document.getElementById('privacyBtn').addEventListener('click', () => {
+      privacyMode = !privacyMode;
+      document.getElementById('privacyBtn').textContent = privacyMode ? 'Privacy On' : 'Privacy Mode';
+    });
+
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    // Drawing
+    function drawFrame(time) {
+      if (privacyMode) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      if (currentMode === 'emotion' && currentEmotion) {
+        const emotion = emotions[currentEmotion];
+        const t = time * 0.0001;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Create gradient (animated for depressed and tired)
+        let grad;
+        if (currentEmotion === 'depressed') {
+          // Inspired: rotating, changing color gradients
+          const colorPalettes = [
+            ['#7B68EE', '#FF6347', '#FFD700'],  // Purple, Red, Gold
+            ['#FF1493', '#FF6347', '#FFD700'],  // Hot Pink, Red, Gold
+            ['#7B68EE', '#00CED1', '#FFD700'],  // Purple, Cyan, Gold
+            ['#FF69B4', '#FFD700', '#FF1493'],  // Hot Pink, Gold, Deep Pink
+            ['#00CED1', '#7B68EE', '#FF6347']   // Cyan, Purple, Red
+          ];
+
+          // Cycle through palettes
+          const paletteIndex = Math.floor((t * 0.15) % colorPalettes.length);
+          const currentPalette = colorPalettes[paletteIndex];
+
+          // Rotate gradient direction
+          const angle = (t * 0.2) % (Math.PI * 2);
+          const gradX = Math.cos(angle) * canvas.width;
+          const gradY = Math.sin(angle) * canvas.height;
+
+          grad = ctx.createLinearGradient(
+            canvas.width / 2 - gradX / 2,
+            canvas.height / 2 - gradY / 2,
+            canvas.width / 2 + gradX / 2,
+            canvas.height / 2 + gradY / 2
+          );
+
+          grad.addColorStop(0, currentPalette[0]);
+          grad.addColorStop(0.5, currentPalette[1]);
+          grad.addColorStop(1, currentPalette[2]);
+        } else if (currentEmotion === 'tired') {
+          // Peaceful: MOVING gradient that CHANGES between lighter and darker lavender
+          const lavenderPalettes = [
+            ['#D4B9E6', '#B19CD9', '#8D63B7'],  // Light to medium lavender
+            ['#C9A6DC', '#A689D0', '#7B50A6'],  // Light-medium to medium
+            ['#B19CD9', '#8D63B7', '#5C2A7F'],  // Medium to dark lavender
+            ['#A689D0', '#7B50A6', '#4A1A6F'],  // Medium-light to darker
+            ['#D4B9E6', '#A689D0', '#6A4C93']   // Light to medium-dark
+          ];
+
+          // Cycle through color palettes
+          const paletteIndex = Math.floor((t * 0.12) % lavenderPalettes.length);
+          const currentPalette = lavenderPalettes[paletteIndex];
+
+          // ROTATE gradient direction continuously
+          const angle = (t * 0.15) % (Math.PI * 2);
+          const gradX = Math.cos(angle) * canvas.width;
+          const gradY = Math.sin(angle) * canvas.height;
+
+          grad = ctx.createLinearGradient(
+            canvas.width / 2 - gradX / 2,
+            canvas.height / 2 - gradY / 2,
+            canvas.width / 2 + gradX / 2,
+            canvas.height / 2 + gradY / 2
+          );
+
+          grad.addColorStop(0, currentPalette[0]);
+          grad.addColorStop(0.5, currentPalette[1]);
+          grad.addColorStop(1, currentPalette[2]);
+        } else {
+          // Standard gradient for other emotions
+          grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+          grad.addColorStop(0, emotion.colors[0]);
+          grad.addColorStop(0.5, emotion.colors[1]);
+          grad.addColorStop(1, emotion.colors[2]);
+        }
+
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.6 + (intensity / 5) * 0.4;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+
+        ctx.globalAlpha = 0.1 + (intensity / 5) * 0.5;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+
+        if (currentEmotion === 'tired') {
+          // PEACEFUL: Dynamically moving starfield — meditative, alive, floating stars
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Generate dynamic starfield
+          const starCount = 250 + intensity * 50;
+          const seed = Math.PI;
+          for (let i = 0; i < starCount; i++) {
+            // Base position (consistent across frames)
+            const starSeed = i * 9.7 + seed;
+            const baseX = (Math.sin(starSeed) * 0.5 + 0.5) * canvas.width;
+            const baseY = (Math.sin(starSeed * 2.3) * 0.5 + 0.5) * canvas.height;
+
+            // DYNAMIC MOTION: Each star moves independently — faster and more dramatic
+            const driftX = Math.sin(t * (0.025 + i * 0.001) + i * 10) * 120;
+            const driftY = Math.cos(t * (0.02 + i * 0.0008) + i * 15) * 100;
+            const driftZ = Math.sin(t * (0.015 + i * 0.0005) + i * 20) * 80; // In/out motion
+
+            const x = baseX + driftX;
+            const y = baseY + driftY;
+
+            // Appear/disappear based on depth
+            const appearFactor = Math.sin(t * (0.006 + i * 0.0001) + i * 8) * 0.5 + 0.5;
+            const depthFactor = Math.abs(driftZ) / 40; // 0 = far (small/dim), 1 = close (big/bright)
+
+            // Skip stars that are too far away or completely faded
+            if (appearFactor < 0.1) continue;
+
+            // Twinkling
+            const twinkleFactor = Math.sin(t * (0.03 + i * 0.0008) + i * 3) * 0.5 + 0.5;
+
+            // Adjust size based on depth (parallax effect)
+            const baseStar = 0.5 + depthFactor * 1.5 + twinkleFactor * 0.5;
+            const starSize = baseStar * (1 + intensity * 0.3);
+
+            // Opacity based on depth and appearance
+            const opacity = appearFactor * (0.3 + depthFactor * 0.7) * (0.5 + twinkleFactor * 0.5);
+
+            // Bright white core
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.9})`;
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(0.3, starSize * 0.7), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Soft glow
+            ctx.fillStyle = `rgba(230, 210, 255, ${opacity * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(0.5, starSize), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outer shimmer
+            ctx.strokeStyle = `rgba(200, 180, 240, ${opacity * 0.3})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(1, starSize + 1.5), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          // Very slow gentle background drift
+          for (let i = 0; i < 3; i++) {
+            const driftX = Math.sin(t * (0.005 + i * 0.001)) * 30;
+            const driftY = Math.cos(t * (0.004 + i * 0.0008)) * 25;
+            const radius = 250 + i * 150;
+
+            ctx.strokeStyle = `rgba(200, 180, 240, ${0.02 * intensity})`;
+            ctx.lineWidth = 0.2;
+            ctx.beginPath();
+            ctx.arc(
+              canvas.width / 2 + driftX,
+              canvas.height / 2 + driftY,
+              radius,
+              0,
+              Math.PI * 2
+            );
+            ctx.stroke();
+          }
+
+          // Dark blue gradient overlay to darken the tired emotion
+          const blueGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          blueGrad.addColorStop(0, 'rgba(30, 50, 100, 0.4)');
+          blueGrad.addColorStop(0.5, 'rgba(20, 40, 80, 0.45)');
+          blueGrad.addColorStop(1, 'rgba(10, 30, 60, 0.4)');
+          ctx.fillStyle = blueGrad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (currentEmotion === 'calm') {
+          // CALM: Realistic ocean waves with light blue lines and lots of foam
+
+          // Layer 1: Thin light blue waves
+          for (let i = 0; i < 6; i++) {
+            const yOffset = 50 + i * 70;
+            const waveHeight = 40 + i * 12;
+            const waveSpeed = 0.1 + i * 0.015;
+            const waveFreq = 0.009 + i * 0.0006;
+
+            ctx.lineWidth = 0.8 + intensity * 0.2;
+            ctx.strokeStyle = `rgba(100, 200, 230, ${0.7 - i * 0.08})`;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 5) {
+              const mainWave = Math.sin(x * waveFreq + t * waveSpeed) * waveHeight;
+              const ripple = Math.sin(x * 0.02 + t * 0.2) * (waveHeight * 0.4);
+              const y = yOffset + mainWave + ripple;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+
+          // Layer 2: Even thinner accent waves (lighter)
+          for (let i = 0; i < 5; i++) {
+            const yOffset = 100 + i * 80;
+            const waveHeight = 30 + i * 10;
+            const waveSpeed = 0.12 + i * 0.012;
+            const waveFreq = 0.011 + i * 0.0007;
+
+            ctx.lineWidth = 0.5 + intensity * 0.15;
+            ctx.strokeStyle = `rgba(150, 220, 240, ${0.5 - i * 0.06})`;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 6) {
+              const wave = Math.sin(x * waveFreq + t * waveSpeed) * waveHeight;
+              const y = yOffset + wave;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+
+          // VOLUMETRIC LIGHT RAYS piercing through water from above — drifting sunlight across the surface
+          const rayCount = 8 + intensity * 2;
+
+          // Drift across the water (left to right) — visible movement
+          const driftAcross = Math.sin(t * 0.15) * (canvas.width * 0.5);
+
+          for (let r = 0; r < rayCount; r++) {
+            // Multiple sine waves create organic swaying motion
+            const primarySway = Math.sin(t * 0.08 + r * 0.7) * 100;
+            const secondarySway = Math.sin(t * 0.05 - r * 0.3) * 60;
+            const tertiarySway = Math.cos(t * 0.03 + r) * 40;
+            const rayX = (r / rayCount) * canvas.width + primarySway + secondarySway + tertiarySway + driftAcross;
+
+            // Ray width pulses and shifts
+            const widthPulse = Math.sin(t * 0.06 + r * 0.4) * 40;
+            const rayWidth = 70 + widthPulse + Math.sin(t * 0.04 + r * 0.2) * 30;
+
+            // Brightness varies for dynamic effect
+            const brightnessPulse = Math.sin(t * 0.04 + r * 0.5) * 0.15 + 0.85;
+
+            // Create gradient for ray (bright at top, fades down)
+            const rayGrad = ctx.createLinearGradient(rayX - rayWidth / 2, 0, rayX + rayWidth / 2, canvas.height);
+            rayGrad.addColorStop(0, `rgba(200, 240, 255, ${0.35 * brightnessPulse})`);
+            rayGrad.addColorStop(0.3, `rgba(150, 220, 240, ${0.22 * brightnessPulse})`);
+            rayGrad.addColorStop(0.7, `rgba(100, 200, 220, ${0.08 * brightnessPulse})`);
+            rayGrad.addColorStop(1, 'rgba(50, 180, 200, 0)');
+
+            ctx.fillStyle = rayGrad;
+            ctx.beginPath();
+            ctx.moveTo(rayX - rayWidth / 2, 0);
+            ctx.lineTo(rayX + rayWidth / 2, 0);
+            ctx.lineTo(rayX + rayWidth * 0.8, canvas.height);
+            ctx.lineTo(rayX - rayWidth * 0.8, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          // ORGANIC SEAFLOOR PATTERNS undulating gently at bottom
+          ctx.strokeStyle = 'rgba(100, 180, 200, 0.3)';
+          ctx.lineWidth = 1.5 + intensity * 0.3;
+
+          for (let layer = 0; layer < 4; layer++) {
+            const yOffset = canvas.height - 150 + layer * 40;
+            const waveHeight = 25 - layer * 4;
+            const waveSpeed = 0.06 - layer * 0.01;
+            const waveFreq = 0.012 + layer * 0.002;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 4) {
+              // Multiple overlapping organic sine waves
+              const wave1 = Math.sin(x * waveFreq + t * waveSpeed) * waveHeight;
+              const wave2 = Math.sin(x * (waveFreq * 0.5) + t * waveSpeed * 0.7) * (waveHeight * 0.6);
+              const wave3 = Math.sin(x * (waveFreq * 1.5) - t * waveSpeed * 0.5) * (waveHeight * 0.4);
+
+              const y = yOffset + wave1 + wave2 + wave3;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+
+          // WATER FOUNTAIN SPRAY — silvery arching spray from bottom
+          const fountainX = canvas.width / 2;
+          const fountainBase = canvas.height - 40;
+          const fountainParticleCount = 150 + intensity * 50;
+
+          for (let p = 0; p < fountainParticleCount; p++) {
+            const particleSeed = p * 5.3 + t * 2;
+            const angle = (Math.sin(particleSeed) * 0.5 + 0.5) * Math.PI; // 0 to PI (upward arc)
+            const speed = 0.3 + (Math.sin(particleSeed * 1.1) * 0.5 + 0.5) * 0.7;
+
+            // Fountain particles follow parabolic arcs
+            const progress = (Math.sin(t * 0.1 + p * 0.01) * 0.5 + 0.5) % 1;
+            const distance = progress * 250 * speed;
+
+            const x = fountainX + Math.cos(angle) * distance;
+            const y = fountainBase - (Math.sin(angle) * distance * 0.8 - progress * progress * 100);
+
+            // Silvery color with opacity based on progress
+            const opacity = Math.max(0, 1 - progress) * (0.6 + Math.sin(t * 0.2 + p) * 0.3);
+            const size = 1 + (1 - progress) * 1.5;
+
+            ctx.fillStyle = `rgba(220, 230, 250, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Add shimmer/glow
+            ctx.strokeStyle = `rgba(240, 245, 255, ${opacity * 0.5})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x, y, size + 1, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+// STARFISH shapes on the seafloor
+          const starfishCount = 3 + Math.floor(intensity / 2);
+          for (let s = 0; s < starfishCount; s++) {
+            const starSeed = s * 17.3 + 100;
+            const starX = (Math.sin(starSeed) * 0.5 + 0.5) * canvas.width;
+            const starY = canvas.height - 60 + (Math.sin(starSeed * 1.7) * 0.5 + 0.5) * 30;
+
+            // Gentle rotation
+            const starRotation = t * (0.01 + s * 0.003);
+
+            ctx.save();
+            ctx.translate(starX, starY);
+            ctx.rotate(starRotation);
+
+            // Draw 5-pointed starfish
+            ctx.fillStyle = `rgba(200, 160, 100, ${0.6 + Math.sin(t * 0.04 + s) * 0.2})`;
+            ctx.beginPath();
+
+            for (let point = 0; point < 5; point++) {
+              const angle = (point * Math.PI * 2) / 5 - Math.PI / 2;
+              const outerX = Math.cos(angle) * 18;
+              const outerY = Math.sin(angle) * 18;
+
+              if (point === 0) ctx.moveTo(outerX, outerY);
+              else ctx.lineTo(outerX, outerY);
+
+              // Inner point for star shape
+              const innerAngle = angle + Math.PI / 5;
+              const innerX = Math.cos(innerAngle) * 8;
+              const innerY = Math.sin(innerAngle) * 8;
+              ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Starfish center detail
+            ctx.fillStyle = `rgba(220, 180, 120, ${0.5 + Math.sin(t * 0.04 + s) * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+          }
+        } else if (currentEmotion === 'anxious') {
+          // ANXIOUS: Jagged lightning bolts and sharp zigzags — chaotic, nervous
+          ctx.lineWidth = 1.5 + intensity * 0.5;
+          for (let i = 0; i < 4 + intensity; i++) {
+            ctx.beginPath();
+            let x = Math.random() * canvas.width;
+            let y = 0;
+            const startX = x;
+            while (y < canvas.height) {
+              x += (Math.random() - 0.5) * 80;
+              y += 20 + Math.random() * 30;
+              ctx.lineTo(Math.max(0, Math.min(canvas.width, x)), y);
+            }
+            ctx.stroke();
+          }
+        } else if (currentEmotion === 'happy') {
+          // HAPPY: Joyful stars with spinning shapes and rainbow gradient background
+
+          // Bright yellow to white to bright violet gradient — smooth transitions with more white
+          const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+          bgGradient.addColorStop(0, 'rgba(255, 255, 100, 0.25)');
+          bgGradient.addColorStop(0.2, 'rgba(255, 240, 150, 0.28)');
+          bgGradient.addColorStop(0.35, 'rgba(255, 255, 200, 0.32)');
+          bgGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.4)');
+          bgGradient.addColorStop(0.65, 'rgba(240, 200, 255, 0.32)');
+          bgGradient.addColorStop(0.8, 'rgba(230, 120, 255, 0.3)');
+          bgGradient.addColorStop(1, 'rgba(210, 50, 255, 0.32)');
+
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = bgGradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const bubbleCount = 16 + intensity * 5;
+
+          for (let i = 0; i < bubbleCount; i++) {
+            // Faster, more playful bouncy motion — accelerated!
+            const xOffset = Math.sin(t * (0.45 + i * 0.06) + i * 10) * (200 + i * 30);
+            const yOffset = Math.cos(t * (0.42 + i * 0.05) + i * 15) * (170 + i * 25);
+            const verticalDrift = Math.sin(t * (0.35 + i * 0.035) + i * 8) * 130;
+            const bounceEffect = Math.sin(t * (0.6 + i * 0.08)) * 30; // Extra bounce for joy
+
+            const x = canvas.width / 2 + xOffset;
+            const y = canvas.height / 2 + yOffset + verticalDrift + bounceEffect;
+
+            // Varying bubble sizes
+            const sizes = [12, 8, 14, 10, 16, 9, 11, 15, 7, 13, 6, 18];
+            const baseRadius = sizes[i % sizes.length] + intensity * 2;
+
+            // Pulsing effect for joyful breathing
+            const pulse = Math.sin(t * (0.2 + i * 0.03)) * 0.35 + 1;
+            const radius = baseRadius * pulse;
+
+            // Rainbow colors for happiness
+            const colors = [
+              'rgba(255, 150, 100, 0.8)',  // Orange
+              'rgba(255, 200, 80, 0.8)',   // Yellow
+              'rgba(255, 100, 150, 0.8)',  // Pink
+              'rgba(100, 200, 255, 0.8)',  // Light blue
+              'rgba(200, 100, 255, 0.8)',  // Purple
+              'rgba(100, 255, 150, 0.8)'   // Green
+            ];
+            const bubbleColor = colors[i % colors.length];
+
+            // Draw 8-pointed star shape instead of circle
+            ctx.lineWidth = 2.5 + intensity * 0.5;
+            ctx.strokeStyle = bubbleColor;
+            ctx.globalAlpha = 0.8 + Math.sin(t * 0.15 + i) * 0.2;
+            ctx.fillStyle = bubbleColor;
+
+            ctx.save();
+            ctx.translate(x, y);
+            // Rotation speed synchronized with pulse — faster when expanding, slower when contracting
+            const rotationSpeed = pulse * 0.5;
+            ctx.rotate(t * rotationSpeed + i * 0.5);
+
+            ctx.beginPath();
+            const pointCount = 8;
+            for (let p = 0; p < pointCount * 2; p++) {
+              const angle = (p / (pointCount * 2)) * Math.PI * 2;
+              const dist = p % 2 === 0 ? radius : radius * 0.5; // Alternating outer/inner points
+              const px = Math.cos(angle) * dist;
+              const py = Math.sin(angle) * dist;
+              if (p === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Shimmer inner star
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.globalAlpha = 0.5 + Math.sin(t * 0.25 + i) * 0.4;
+            ctx.beginPath();
+            const innerPoints = 4;
+            for (let p = 0; p < innerPoints * 2; p++) {
+              const angle = (p / (innerPoints * 2)) * Math.PI * 2 + Math.PI / innerPoints;
+              const dist = p % 2 === 0 ? radius * 0.6 : radius * 0.3;
+              const px = Math.cos(angle) * dist;
+              const py = Math.sin(angle) * dist;
+              if (p === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Sparkle particles dancing around bubbles
+            const sparkleCount = 4 + Math.floor(intensity);
+            for (let s = 0; s < sparkleCount; s++) {
+              const sparkleAngle = (s / sparkleCount) * Math.PI * 2 + t * 0.6;
+              const sparkleDistance = radius + 12 + Math.sin(t * 0.4 + i + s) * 8;
+              const sparkleX = x + Math.cos(sparkleAngle) * sparkleDistance;
+              const sparkleY = y + Math.sin(sparkleAngle) * sparkleDistance;
+
+              const sparkleOpacity = (0.6 + Math.sin(t * 0.3 + i * 0.1 + s) * 0.4) * 0.8;
+              ctx.fillStyle = `rgba(255, 255, 150, ${sparkleOpacity})`;
+              ctx.globalAlpha = sparkleOpacity;
+              ctx.beginPath();
+              ctx.arc(sparkleX, sparkleY, 2 + Math.sin(t * 0.2 + s) * 0.8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          // Many spinning geometric shapes orbiting joyfully — spread out
+          const shapeCount = 25 + intensity * 15;
+
+          for (let sh = 0; sh < shapeCount; sh++) {
+            const orbitRadius = 180 + Math.sin(sh * 3.7) * 180 + Math.cos(t * 0.2 + sh) * 120;
+            const orbitAngle = (sh / shapeCount) * Math.PI * 2 + t * (0.3 + Math.sin(sh * 1.3) * 0.2);
+
+            const shapeX = canvas.width / 2 + Math.cos(orbitAngle) * orbitRadius;
+            const shapeY = canvas.height / 2 + Math.sin(orbitAngle) * orbitRadius;
+
+            ctx.save();
+            ctx.translate(shapeX, shapeY);
+
+            // Rotate each shape at different speeds
+            const rotationSpeed = 0.4 + Math.sin(sh * 5.7) * 0.3;
+            const rotationDirection = sh % 2 === 0 ? 1 : -1;
+            ctx.rotate(t * rotationSpeed * rotationDirection + sh * 0.3);
+
+            const shapeSize = 12 + Math.sin(t * 0.4 + sh) * 6;
+            const shapeOpacity = 0.6 + Math.sin(t * 0.3 + sh * 0.1) * 0.3;
+            const colorShift = Math.sin(sh * 7.3 + t * 0.2) * 50;
+
+            ctx.lineWidth = 2 + intensity * 0.2;
+            ctx.globalAlpha = shapeOpacity;
+
+            // Different shapes for visual variety
+            const shapeType = sh % 4;
+            if (shapeType === 0) {
+              // Hexagon
+              ctx.strokeStyle = `rgba(255, ${220 + colorShift}, 100, 1)`;
+              ctx.beginPath();
+              for (let s = 0; s < 6; s++) {
+                const a = (s / 6) * Math.PI * 2;
+                const px = Math.cos(a) * shapeSize;
+                const py = Math.sin(a) * shapeSize;
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+            } else if (shapeType === 1) {
+              // Triangle
+              ctx.strokeStyle = `rgba(${180 + colorShift}, 220, 255, 1)`;
+              ctx.beginPath();
+              for (let s = 0; s < 3; s++) {
+                const a = (s / 3) * Math.PI * 2 - Math.PI / 2;
+                const px = Math.cos(a) * shapeSize;
+                const py = Math.sin(a) * shapeSize;
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+            } else if (shapeType === 2) {
+              // Square
+              ctx.strokeStyle = `rgba(255, ${150 + colorShift}, 200, 1)`;
+              ctx.beginPath();
+              for (let s = 0; s < 4; s++) {
+                const a = (s / 4) * Math.PI * 2;
+                const px = Math.cos(a) * shapeSize;
+                const py = Math.sin(a) * shapeSize;
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+            } else {
+              // Pentagon
+              ctx.strokeStyle = `rgba(${200 + colorShift}, 255, 150, 1)`;
+              ctx.beginPath();
+              for (let s = 0; s < 5; s++) {
+                const a = (s / 5) * Math.PI * 2 - Math.PI / 2;
+                const px = Math.cos(a) * shapeSize;
+                const py = Math.sin(a) * shapeSize;
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+            }
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // Transparent 3D wireframe shapes spinning around — more shapes, faster rotation
+          const shape3DCount = 16 + Math.floor(intensity);
+
+          for (let s3d = 0; s3d < shape3DCount; s3d++) {
+            const orbit3DRadius = 220 + Math.sin(s3d * 2.1) * 180;
+            const orbit3DAngle = (s3d / shape3DCount) * Math.PI * 2 + t * 0.35;
+
+            const shape3DX = canvas.width / 2 + Math.cos(orbit3DAngle) * orbit3DRadius;
+            const shape3DY = canvas.height / 2 + Math.sin(orbit3DAngle) * orbit3DRadius;
+
+            ctx.save();
+            ctx.translate(shape3DX, shape3DY);
+
+            const shape3DType = s3d % 4;
+            const shape3DSize = 20 + Math.sin(t * 0.3 + s3d) * 8;
+            const shape3DOpacity = 0.5 + Math.sin(t * 0.2 + s3d * 0.15) * 0.3;
+            const shape3DColor = s3d % 2 === 0 ? `rgba(100, 200, 255, ${shape3DOpacity})` : `rgba(255, 150, 200, ${shape3DOpacity})`;
+
+            ctx.lineWidth = 1.5 + intensity * 0.15;
+            ctx.strokeStyle = shape3DColor;
+            ctx.globalAlpha = shape3DOpacity;
+
+            // 3D rotation — faster spinning
+            ctx.rotate(t * 0.7 + s3d * 0.5);
+
+            if (shape3DType === 0) {
+              // Wireframe cube
+              const h = shape3DSize;
+              ctx.beginPath();
+              // Front face
+              ctx.moveTo(-h, -h);
+              ctx.lineTo(h, -h);
+              ctx.lineTo(h, h);
+              ctx.lineTo(-h, h);
+              ctx.closePath();
+              ctx.stroke();
+              // Back face (offset for 3D effect)
+              const offset = h * 0.5;
+              ctx.beginPath();
+              ctx.moveTo(-h + offset, -h + offset);
+              ctx.lineTo(h + offset, -h + offset);
+              ctx.lineTo(h + offset, h + offset);
+              ctx.lineTo(-h + offset, h + offset);
+              ctx.closePath();
+              ctx.stroke();
+              // Connecting edges
+              ctx.beginPath();
+              ctx.moveTo(-h, -h);
+              ctx.lineTo(-h + offset, -h + offset);
+              ctx.moveTo(h, -h);
+              ctx.lineTo(h + offset, -h + offset);
+              ctx.moveTo(h, h);
+              ctx.lineTo(h + offset, h + offset);
+              ctx.moveTo(-h, h);
+              ctx.lineTo(-h + offset, h + offset);
+              ctx.stroke();
+            } else if (shape3DType === 1) {
+              // Wireframe pyramid
+              ctx.beginPath();
+              ctx.moveTo(0, -shape3DSize * 1.2);
+              ctx.lineTo(-shape3DSize, shape3DSize);
+              ctx.lineTo(shape3DSize, shape3DSize);
+              ctx.lineTo(-shape3DSize, shape3DSize);
+              ctx.lineTo(0, -shape3DSize * 1.2);
+              ctx.lineTo(shape3DSize, shape3DSize);
+              ctx.closePath();
+              ctx.stroke();
+              // Base
+              ctx.beginPath();
+              ctx.moveTo(-shape3DSize, shape3DSize);
+              ctx.lineTo(shape3DSize, shape3DSize);
+              ctx.stroke();
+            } else if (shape3DType === 2) {
+              // Wireframe octahedron
+              ctx.beginPath();
+              ctx.moveTo(0, -shape3DSize * 1.3);
+              ctx.lineTo(shape3DSize, 0);
+              ctx.lineTo(0, shape3DSize * 1.3);
+              ctx.lineTo(-shape3DSize, 0);
+              ctx.closePath();
+              ctx.stroke();
+              // Top and bottom points
+              ctx.beginPath();
+              ctx.moveTo(shape3DSize, 0);
+              ctx.lineTo(0, -shape3DSize);
+              ctx.moveTo(-shape3DSize, 0);
+              ctx.lineTo(0, -shape3DSize);
+              ctx.moveTo(shape3DSize, 0);
+              ctx.lineTo(0, shape3DSize);
+              ctx.moveTo(-shape3DSize, 0);
+              ctx.lineTo(0, shape3DSize);
+              ctx.stroke();
+            } else {
+              // Wireframe sphere (using circles at different scales)
+              ctx.beginPath();
+              ctx.arc(0, 0, shape3DSize, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.arc(0, 0, shape3DSize * 0.7, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.ellipse(0, 0, shape3DSize, shape3DSize * 0.4, Math.PI / 4, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+          }
+
+          // Sparkling magical particles scattered across screen
+          const sparkleCount = 30 + intensity * 20;
+
+          for (let sp = 0; sp < sparkleCount; sp++) {
+            // Random position across entire screen
+            const sparkleX = Math.sin(sp * 7.3 + t * 0.4) * canvas.width * 0.5 + canvas.width * 0.5;
+            const sparkleY = Math.cos(sp * 5.1 + t * 0.3) * canvas.height * 0.5 + canvas.height * 0.5;
+
+            // Twinkling effect — appears and disappears
+            const twinkle = Math.sin(sp * 11.7 + t * 1.2) * 0.5 + 0.5;
+            const sparkleOpacity = twinkle * twinkle; // Squared for more dramatic on/off
+
+            if (sparkleOpacity > 0.1) {
+              ctx.globalAlpha = sparkleOpacity * 0.9;
+
+              // Sparkling color — bright white with slight color shift
+              const sparkleHue = Math.sin(sp * 3.2 + t * 0.5) * 30;
+              ctx.fillStyle = `rgba(255, ${255 - sparkleHue}, ${200 + sparkleHue}, 1)`;
+
+              // Draw 4-pointed star sparkle
+              ctx.save();
+              ctx.translate(sparkleX, sparkleY);
+              ctx.rotate(t * 0.8 + sp * 0.2);
+
+              const sparkleSize = 2 + Math.sin(t * 0.5 + sp) * 1.5;
+              ctx.beginPath();
+              ctx.moveTo(0, -sparkleSize);
+              ctx.lineTo(sparkleSize * 0.4, 0);
+              ctx.lineTo(0, sparkleSize);
+              ctx.lineTo(-sparkleSize * 0.4, 0);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.restore();
+            }
+          }
+
+          // Fast-moving bright white sparkles
+          const fastSparkleCount = 12 + Math.floor(intensity * 2);
+
+          for (let fs = 0; fs < fastSparkleCount; fs++) {
+            // Fast linear movement across screen
+            const moveSpeed = 200 + fs * 30;
+            const moveAngle = (fs / fastSparkleCount) * Math.PI * 2;
+
+            const fastSparkleX = (Math.cos(moveAngle) * moveSpeed * t) % canvas.width;
+            const fastSparkleY = (Math.sin(moveAngle) * moveSpeed * t) % canvas.height;
+
+            // Wrap around screen
+            const wrappedX = (fastSparkleX + canvas.width) % canvas.width;
+            const wrappedY = (fastSparkleY + canvas.height) % canvas.height;
+
+            ctx.globalAlpha = 0.8 + Math.sin(t * 2 + fs) * 0.2;
+
+            // Bright white color
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+
+            // Draw bright white sparkle with glow
+            ctx.save();
+            ctx.translate(wrappedX, wrappedY);
+            ctx.rotate(t * 1.5 + fs * 0.3);
+
+            // Inner bright point
+            ctx.beginPath();
+            ctx.arc(0, 0, 3 + Math.sin(t * 0.8 + fs) * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outer glow ring
+            ctx.globalAlpha = 0.4 + Math.sin(t * 1.5 + fs) * 0.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 6 + Math.sin(t * 0.6 + fs) * 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 4-pointed star burst
+            ctx.globalAlpha = 0.6 + Math.sin(t * 2 + fs) * 0.3;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -8);
+            ctx.lineTo(0, 8);
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(8, 0);
+            ctx.stroke();
+
+            ctx.restore();
+          }
+
+          // Joy flashes
+          const flashIntensity = Math.max(0, Math.sin(t * 0.6) - 0.7) * 2;
+          if (flashIntensity > 0) {
+            ctx.globalAlpha = flashIntensity * 0.15;
+            ctx.fillStyle = 'rgba(255, 255, 200, 1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+
+          ctx.globalAlpha = 0.1 + (intensity / 5) * 0.5;
+        } else if (currentEmotion === 'depressed') {
+          // INSPIRED: Ambient background motion with flowing, morphing shapes
+
+          // Smooth gradient background shifting through inspiration colors
+          const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+          bgGradient.addColorStop(0, `rgba(100, 200, 255, 0.15)`);
+          bgGradient.addColorStop(0.5, `rgba(100, 255, 200, 0.1)`);
+          bgGradient.addColorStop(1, `rgba(150, 220, 255, 0.15)`);
+          ctx.fillStyle = bgGradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Multiple flowing ambient shapes at different depths and speeds
+          const shapeCount = 8 + intensity * 2;
+
+          for (let shape = 0; shape < shapeCount; shape++) {
+            const seed = shape * 17.3;
+
+            // Layered motion — different speeds for depth effect
+            const layerSpeed = 0.08 + (shape / shapeCount) * 0.15;
+            const xMotion = Math.sin(t * layerSpeed + seed) * (canvas.width * 0.4);
+            const yMotion = Math.cos(t * layerSpeed * 0.8 + seed * 1.2) * (canvas.height * 0.35);
+
+            const shapeX = canvas.width / 2 + xMotion;
+            const shapeY = canvas.height / 2 + yMotion;
+
+            // Blooming and fading effect
+            const bloomPhase = (t * 0.3 + shape * 8) % (Math.PI * 2);
+            const bloom = Math.sin(bloomPhase) * 0.5 + 0.5; // 0 to 1
+            const shapeOpacity = bloom * (0.5 + Math.sin(t * 0.2 + shape) * 0.3);
+
+            if (shapeOpacity > 0.05) {
+              // Size morphs smoothly
+              const baseSize = 60 + Math.sin(t * 0.15 + seed) * 40;
+              const morphSize = baseSize * (0.6 + bloom * 0.4);
+
+              // Create radial gradient for soft, glowing appearance
+              const shapeGradient = ctx.createRadialGradient(shapeX, shapeY, 0, shapeX, shapeY, morphSize);
+
+              // Color shifts through blue-green-turquoise spectrum
+              const colorShift = Math.sin(t * 0.1 + shape * 0.5) * 50;
+              shapeGradient.addColorStop(0, `rgba(150, ${230 + colorShift}, 255, ${shapeOpacity})`);
+              shapeGradient.addColorStop(0.6, `rgba(${120 + colorShift}, 240, 200, ${shapeOpacity * 0.6})`);
+              shapeGradient.addColorStop(1, `rgba(100, 220, 255, 0)`);
+
+              ctx.globalAlpha = shapeOpacity;
+              ctx.fillStyle = shapeGradient;
+              ctx.beginPath();
+              ctx.arc(shapeX, shapeY, morphSize, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Soft outline glow
+              ctx.strokeStyle = `rgba(100, ${220 + colorShift}, 255, ${shapeOpacity * 0.4})`;
+              ctx.lineWidth = 1;
+              ctx.globalAlpha = shapeOpacity * 0.5;
+              ctx.stroke();
+            }
+          }
+
+          // Flowing wave patterns across screen
+          const waveCount = 3 + Math.floor(intensity / 2);
+          for (let w = 0; w < waveCount; w++) {
+            const waveHeight = 40 + w * 30;
+            const wavePhase = t * (0.1 + w * 0.05) + w * Math.PI;
+
+            ctx.strokeStyle = `rgba(100, ${220 + w * 10}, 255, 0.2)`;
+            ctx.lineWidth = 1.5 + intensity * 0.2;
+            ctx.globalAlpha = 0.4 + Math.sin(t * 0.2 + w) * 0.2;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 10) {
+              const y = canvas.height / 2 + Math.sin(x * 0.01 + wavePhase) * waveHeight + Math.cos(t * 0.15 + w) * 20;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+
+          // Ambient floating particles that bloom and fade
+          const particleCount = 50 + intensity * 30;
+          for (let p = 0; p < particleCount; p++) {
+            const pSeed = p * 19.7;
+
+            // Organic floating motion
+            const pX = (Math.sin(t * 0.12 + pSeed) * canvas.width * 0.45) + (canvas.width / 2);
+            const pY = (Math.cos(t * 0.1 + pSeed * 1.1) * canvas.height * 0.4) + (canvas.height / 2);
+
+            // Particle bloom cycle
+            const pBloom = Math.sin(t * 0.4 + p * 0.8) * 0.5 + 0.5;
+            const pOpacity = pBloom * 0.7;
+
+            if (pOpacity > 0.05) {
+              ctx.globalAlpha = pOpacity;
+              ctx.fillStyle = `rgba(100, ${240 + pBloom * 20}, 255, 1)`;
+              ctx.beginPath();
+              ctx.arc(pX, pY, 2 + pBloom * 2, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          ctx.globalAlpha = 0.1 + (intensity / 5) * 0.5;
+        } else if (currentEmotion === 'energized') {
+          // ENERGIZED: Central upward water fountain with cascading particles
+
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const fountainCount = 200 + intensity * 120;
+
+          for (let f = 0; f < fountainCount; f++) {
+            // Time-based launch creates continuous spray
+            const launchTime = (t * 2 + f * 0.02) % 3;
+
+            // Each particle shoots upward from center with slight radial spray
+            const spreadAngle = (f % 12) * (Math.PI * 2 / 12) + Math.sin(f * 7.3) * 0.3;
+            const angle = -Math.PI / 2 + spreadAngle * 0.25; // Mostly straight up, some spread
+
+            const initialVelocity = 400 + intensity * 80;
+            const gravity = 300;
+
+            // Parabolic physics
+            const velocityX = Math.cos(angle) * initialVelocity;
+            const velocityY = Math.sin(angle) * initialVelocity;
+
+            const particleX = centerX + velocityX * launchTime;
+            const particleY = centerY + velocityY * launchTime - (gravity * launchTime * launchTime * 0.5);
+
+            // Only draw particles moving upward and in view
+            if (particleY < centerY - 30 && particleY > 0) {
+              // Fade based on travel time
+              const opacity = Math.max(0, 1 - (launchTime / 3)) * 0.8;
+
+              // Bright glowing colors with random pink variation
+              const isRandomPink = Math.sin(f * 17.3 + t * 0.8) > 0.6;
+              if (isRandomPink) {
+                ctx.fillStyle = `rgba(255, 100, 200, ${opacity})`;
+              } else {
+                const hueShift = Math.sin(f * 11.7 + t * 0.5) * 40;
+                ctx.fillStyle = `rgba(255, ${180 + hueShift}, 100, ${opacity})`;
+              }
+              ctx.globalAlpha = opacity;
+
+              // Draw elegant water droplet shape with bezier curves
+              const dropletSize = 3 + intensity * 0.4;
+              const dropletAngle = Math.atan2(velocityY, velocityX) + Math.PI / 2; // Point in direction of motion
+
+              ctx.save();
+              ctx.translate(particleX, particleY);
+              ctx.rotate(dropletAngle);
+
+              ctx.beginPath();
+              // Top bulb of droplet using bezier curve
+              ctx.quadraticCurveTo(dropletSize, 0, dropletSize * 0.7, dropletSize * 1.2);
+              // Right side tapering to point
+              ctx.quadraticCurveTo(dropletSize * 0.3, dropletSize * 2.5, 0, dropletSize * 3);
+              // Left side tapering to point (mirror)
+              ctx.quadraticCurveTo(-dropletSize * 0.3, dropletSize * 2.5, -dropletSize * 0.7, dropletSize * 1.2);
+              // Back to top
+              ctx.quadraticCurveTo(-dropletSize, 0, 0, -dropletSize * 0.5);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.restore();
+            }
+          }
+
+          // Second spray: Downward water droplets from opposite side
+          for (let f = 0; f < fountainCount; f++) {
+            // Time-based launch creates continuous spray
+            const launchTime = (t * 2 + f * 0.02) % 3;
+
+            // Each particle shoots downward from center with slight radial spray (opposite of upward)
+            const spreadAngle = (f % 12) * (Math.PI * 2 / 12) + Math.sin(f * 7.3) * 0.3;
+            const angle = Math.PI / 2 + spreadAngle * 0.25; // Mostly straight down, some spread
+
+            const initialVelocity = 400 + intensity * 80;
+            const gravity = 300;
+
+            // Parabolic physics (downward)
+            const velocityX = Math.cos(angle) * initialVelocity;
+            const velocityY = Math.sin(angle) * initialVelocity;
+
+            const particleX = centerX + velocityX * launchTime;
+            const particleY = centerY + velocityY * launchTime + (gravity * launchTime * launchTime * 0.5);
+
+            // Only draw particles moving downward and in view
+            if (particleY > centerY + 30 && particleY < canvas.height) {
+              // Fade based on travel time
+              const opacity = Math.max(0, 1 - (launchTime / 3)) * 0.8;
+
+              // Same bright glowing colors as upward spray with random pink variation
+              const isRandomPink = Math.sin(f * 17.3 + t * 0.8) > 0.6;
+              if (isRandomPink) {
+                ctx.fillStyle = `rgba(255, 100, 200, ${opacity})`;
+              } else {
+                const hueShift = Math.sin(f * 11.7 + t * 0.5) * 40;
+                ctx.fillStyle = `rgba(255, ${180 + hueShift}, 100, ${opacity})`;
+              }
+              ctx.globalAlpha = opacity;
+
+              // Draw elegant water droplet shape with bezier curves
+              const dropletSize = 3 + intensity * 0.4;
+              const dropletAngle = Math.atan2(velocityY, velocityX) + Math.PI / 2;
+
+              ctx.save();
+              ctx.translate(particleX, particleY);
+              ctx.rotate(dropletAngle);
+
+              ctx.beginPath();
+              ctx.quadraticCurveTo(dropletSize, 0, dropletSize * 0.7, dropletSize * 1.2);
+              ctx.quadraticCurveTo(dropletSize * 0.3, dropletSize * 2.5, 0, dropletSize * 3);
+              ctx.quadraticCurveTo(-dropletSize * 0.3, dropletSize * 2.5, -dropletSize * 0.7, dropletSize * 1.2);
+              ctx.quadraticCurveTo(-dropletSize, 0, 0, -dropletSize * 0.5);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.restore();
+            }
+          }
+
+          // Glowing fountain source in center
+          const sourcePulse = 0.6 + Math.sin(t * 1.5) * 0.3;
+          const sourceGrad = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, 80);
+          sourceGrad.addColorStop(0, `rgba(255, 220, 140, ${sourcePulse * 0.9})`);
+          sourceGrad.addColorStop(0.6, `rgba(255, 180, 100, ${sourcePulse * 0.4})`);
+          sourceGrad.addColorStop(1, 'rgba(255, 150, 80, 0)');
+
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = sourceGrad;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bright center core
+          ctx.globalAlpha = sourcePulse;
+          ctx.fillStyle = 'rgba(255, 240, 160, 1)';
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 20 + sourcePulse * 15, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.globalAlpha = 0.1 + (intensity / 5) * 0.5;
+        }
+      } else if (currentMode === 'paint') {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (generatedImageData) {
+          // Display generated image with realism control
+          const opacity = realism / 5;
+          ctx.globalAlpha = opacity;
+
+          const scale = Math.min(
+            canvas.width / generatedImageData.width,
+            canvas.height / generatedImageData.height
+          );
+          const x = (canvas.width - generatedImageData.width * scale) / 2;
+          const y = (canvas.height - generatedImageData.height * scale) / 2;
+
+          ctx.drawImage(
+            generatedImageData,
+            x, y,
+            generatedImageData.width * scale,
+            generatedImageData.height * scale
+          );
+          ctx.globalAlpha = 1;
+        } else {
+          // Placeholder
+          ctx.fillStyle = '#222';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#666';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.5;
+          ctx.fillText('Describe imagery and click Paint Picture', canvas.width / 2, canvas.height / 2);
+          ctx.globalAlpha = 1;
+        }
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#333';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.5;
+        ctx.fillText('Select emotion or paint mode', canvas.width / 2, canvas.height / 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function animate(time) {
+      drawFrame(time);
+      requestAnimationFrame(animate);
+    }
+    animate(0);
+  </script>
+</body>
+</html>
