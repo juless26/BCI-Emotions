@@ -21,7 +21,29 @@ exports.handler = async (event, context) => {
       enhancedPrompt += ', photorealistic, highly detailed, professional photography';
     }
 
-    const prediction = await createPrediction(apiToken, enhancedPrompt);
+    // First, get the latest version of flux-2-pro
+    const modelUrl = 'https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro';
+    const modelResponse = await fetch(modelUrl, {
+      headers: { 'Authorization': `Token ${apiToken}` }
+    });
+
+    if (!modelResponse.ok) {
+      const errorText = await modelResponse.text();
+      console.error('Model fetch error:', modelResponse.status, errorText);
+      throw new Error(`Failed to fetch model info: ${modelResponse.status} ${errorText.substring(0, 100)}`);
+    }
+
+    const modelData = await modelResponse.json();
+    const versionId = modelData.latest_version?.id;
+
+    if (!versionId) {
+      console.error('No version ID found in model data:', JSON.stringify(modelData));
+      throw new Error('Could not find latest version ID for flux-2-pro');
+    }
+
+    console.log('Got version ID:', versionId);
+
+    const prediction = await createPrediction(apiToken, enhancedPrompt, versionId);
     const imageUrl = await waitForPrediction(apiToken, prediction.id);
     const imageBase64 = await fetchImageAsBase64(imageUrl);
 
@@ -40,21 +62,9 @@ exports.handler = async (event, context) => {
   }
 };
 
-async function createPrediction(apiToken, prompt) {
+async function createPrediction(apiToken, prompt, versionId) {
   try {
-    // First, get the latest version of flux-2-pro
-    const modelResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro', {
-      headers: { 'Authorization': `Token ${apiToken}` }
-    });
-
-    const modelData = await modelResponse.json();
-    const versionId = modelData.latest_version?.id;
-
-    if (!versionId) {
-      throw new Error('Could not fetch latest flux-2-pro version');
-    }
-
-    console.log('Using version:', versionId);
+    console.log('Creating prediction with version:', versionId);
 
     const payload = {
       version: versionId,
@@ -74,9 +84,8 @@ async function createPrediction(apiToken, prompt) {
       body: JSON.stringify(payload)
     });
 
-    console.log('Response status:', response.status);
     const text = await response.text();
-    console.log('Response body:', text.substring(0, 500));
+    console.log('Prediction response status:', response.status, 'body:', text.substring(0, 300));
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}. Response: ${text.substring(0, 200)}`);
@@ -84,7 +93,7 @@ async function createPrediction(apiToken, prompt) {
 
     return JSON.parse(text);
   } catch (error) {
-    console.error('Fetch error:', error);
+    console.error('Prediction error:', error);
     throw error;
   }
 }
