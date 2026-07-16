@@ -1,3 +1,4 @@
+const Replicate = require('replicate');
 const https = require('https');
 
 exports.handler = async (event, context) => {
@@ -29,19 +30,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Determine model based on realism setting
-    // realism 1-2: more artistic/impressionistic
-    // realism 3-4: balanced
-    // realism 5: photorealistic
-    const models = {
-      artistic: 'stable-diffusion:db21e45d3f7023abc9571faf60dd5b3b910bcee75cbfd08d04f55a62cf1b9546',
-      balanced: 'stable-diffusion:db21e45d3f7023abc9571faf60dd5b3b910bcee75cbfd08d04f55a62cf1b9546',
-      realistic: 'stable-diffusion:db21e45d3f7023abc9571faf60dd5b3b910bcee75cbfd08d04f55a62cf1b9546'
-    };
-
-    let modelType = 'balanced';
-    if (realism <= 2) modelType = 'artistic';
-    else if (realism >= 5) modelType = 'realistic';
+    // Initialize Replicate client
+    const replicate = new Replicate({ auth: apiToken });
 
     // Add style prompts based on realism
     let enhancedPrompt = prompt;
@@ -51,22 +41,48 @@ exports.handler = async (event, context) => {
       enhancedPrompt += ', photorealistic, highly detailed, professional photography';
     }
 
-    // Create prediction via Replicate API
-    const predictionRequest = {
-        input: {
-        prompt: enhancedPrompt,
-        num_outputs: 1,
-        height: 768,
-        width: 768,
-        num_inference_steps: 50,
-        guidance_scale: 7.5
-      }
-    };
-
     console.log('Calling Replicate with prompt:', enhancedPrompt);
 
-    // Poll for prediction completion
-    const imageUrl = await callReplicateAPI(apiToken, predictionRequest);
+    // Get the latest version of flux-2-pro first
+    let modelVersion = null;
+    try {
+      const model = await replicate.models.get('black-forest-labs', 'flux-2-pro');
+      if (model && model.latest_version) {
+        modelVersion = model.latest_version.id;
+        console.log('Using flux-2-pro version:', modelVersion);
+      }
+    } catch (e) {
+      console.warn('Could not fetch model versions, will try with model name only:', e.message);
+    }
+
+    // Run the model using Replicate client
+    let output;
+    if (modelVersion) {
+      output = await replicate.run(
+        `black-forest-labs/flux-2-pro:${modelVersion}`,
+        {
+          input: {
+            prompt: enhancedPrompt,
+            resolution: '1 MP',
+            aspect_ratio: '1:1',
+            output_format: 'webp'
+          }
+        }
+      );
+    } else {
+      // Fallback: try with just model name
+      output = await replicate.run('black-forest-labs/flux-2-pro', {
+        input: {
+          prompt: enhancedPrompt,
+          resolution: '1 MP',
+          aspect_ratio: '1:1',
+          output_format: 'webp'
+        }
+      });
+    }
+
+    // output is an array of image URLs
+    const imageUrl = output[0];
 
     if (!imageUrl) {
       return {
@@ -100,111 +116,6 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
-async function callReplicateAPI(apiToken, predictionData) {
-  return new Promise((resolve, reject) => {
-    const postData = JSON.stringify(predictionData);
-
-    const options = {
-      hostname: 'api.replicate.com',
-      path: '/v1/predictions',
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${apiToken}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', async () => {
-        try {
-          const response = JSON.parse(data);
-
-          if (res.statusCode !== 201) {
-            reject(new Error(`Replicate API error: ${response.detail || response.error || 'Unknown error'}`));
-            return;
-          }
-
-          const predictionId = response.id;
-          console.log('Prediction created:', predictionId);
-
-          // Poll for completion
-          const imageUrl = await pollForCompletion(apiToken, predictionId);
-          resolve(imageUrl);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(postData);
-    req.end();
-  });
-}
-
-async function pollForCompletion(apiToken, predictionId, maxAttempts = 120) {
-  return new Promise((resolve, reject) => {
-    let attempts = 0;
-
-    const pollInterval = setInterval(() => {
-      attempts++;
-
-      if (attempts > maxAttempts) {
-        clearInterval(pollInterval);
-        reject(new Error('Prediction timed out'));
-        return;
-      }
-
-      https.get({
-        hostname: 'api.replicate.com',
-        path: `/v1/predictions/${predictionId}`,
-        headers: {
-          'Authorization': `Token ${apiToken}`
-        }
-      }, (res) => {
-        let data = '';
-
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const prediction = JSON.parse(data);
-
-            if (prediction.status === 'succeeded') {
-              clearInterval(pollInterval);
-              const imageUrl = prediction.output?.[0];
-              if (!imageUrl) {
-                reject(new Error('No output from prediction'));
-              } else {
-                resolve(imageUrl);
-              }
-            } else if (prediction.status === 'failed') {
-              clearInterval(pollInterval);
-              reject(new Error(`Prediction failed: ${prediction.error || 'Unknown error'}`));
-            }
-            // If status is 'processing', continue polling
-          } catch (e) {
-            clearInterval(pollInterval);
-            reject(e);
-          }
-        });
-      }).on('error', (e) => {
-        clearInterval(pollInterval);
-        reject(e);
-      });
-    }, 1000); // Poll every second
-  });
-}
 
 async function fetchImageAsBase64(imageUrl) {
   return new Promise((resolve, reject) => {
