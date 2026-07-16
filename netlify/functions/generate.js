@@ -22,7 +22,7 @@ exports.handler = async (event, context) => {
     }
 
     // Call Stability AI API
-    const response = await fetch('https://api.stability.ai/v1/text-to-image', {
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,8 +30,13 @@ exports.handler = async (event, context) => {
         'Accept': 'application/json'
       },
       body: JSON.stringify({
-        prompt: enhancedPrompt,
-        cfg_scale: 7,
+        text_prompts: [
+          {
+            text: enhancedPrompt,
+            weight: 1
+          }
+        ],
+        cfg_scale: 7.0,
         height: 512,
         width: 512,
         samples: 1,

@@ -211,69 +211,6 @@
       color: #ffffff;
     }
 
-    .intensity-section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .intensity-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      color: #ffffff;
-      text-transform: uppercase;
-    }
-
-    .intensity-slider {
-      width: 100%;
-      height: 3px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    .intensity-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.6);
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .intensity-slider::-webkit-slider-thumb:hover {
-      background: rgba(255, 255, 255, 0.9);
-    }
-
-    .intensity-slider::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.6);
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s ease;
-    }
-
-    .intensity-slider::-moz-range-thumb:hover {
-      background: rgba(255, 255, 255, 0.9);
-    }
-
-    .intensity-display {
-      font-size: 12px;
-      color: #e0e0e0;
-      text-align: center;
-      letter-spacing: 0.5px;
-      font-weight: 500;
-    }
 
     .privacy-button {
       padding: 10px;
@@ -345,17 +282,6 @@
         </div>
       </div>
 
-      <div class="intensity-section">
-        <label class="intensity-label">Intensity</label>
-        <input type="range" id="intensity" class="intensity-slider" min="1" max="5" value="3">
-        <div class="intensity-display"><span id="intensityValue">3</span> / 5</div>
-      </div>
-
-      <div class="intensity-section">
-        <label class="intensity-label">Realism</label>
-        <input type="range" id="realism" class="intensity-slider" min="1" max="5" value="3">
-        <div class="intensity-display"><span id="realismValue">3</span> / 5 (Photo ← → Paint)</div>
-      </div>
 
       <button class="privacy-button" id="privacyButton">Privacy Mode</button>
 
@@ -810,17 +736,6 @@
       generateImageWithReplicate(text, realism);
     });
 
-    // Intensity
-    document.getElementById('intensity').addEventListener('input', (e) => {
-      intensity = parseInt(e.target.value);
-      document.getElementById('intensityValue').textContent = intensity;
-    });
-
-    // Realism slider
-    document.getElementById('realism').addEventListener('input', (e) => {
-      realism = parseInt(e.target.value);
-      document.getElementById('realismValue').textContent = realism;
-    });
 
     // Privacy
     document.getElementById('privacyButton').addEventListener('click', () => {
