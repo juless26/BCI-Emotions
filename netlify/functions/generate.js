@@ -45,7 +45,7 @@ exports.handler = async (event, context) => {
 function createPrediction(apiToken, prompt) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
-      version: 'cabbed36d776541d0d20e3be993bd97af9177e32de1580dce1cb1573fcd34fef',
+      model: 'black-forest-labs/flux-2-pro',
       input: {
         prompt: prompt,
         aspect_ratio: '1:1',
