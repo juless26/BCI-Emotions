@@ -37,8 +37,8 @@ exports.handler = async (event, context) => {
           }
         ],
         cfg_scale: 7.0,
-        height: 512,
-        width: 512,
+        height: 1024,
+        width: 1024,
         samples: 1,
         steps: 30
       })
