@@ -1,5 +1,3 @@
-const https = require('https');
-
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
@@ -42,99 +40,80 @@ exports.handler = async (event, context) => {
   }
 };
 
-function createPrediction(apiToken, prompt) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({
-      model: 'black-forest-labs/flux-2-pro',
-      input: {
-        prompt: prompt,
-        aspect_ratio: '1:1',
-        output_format: 'webp'
-      }
-    });
+async function createPrediction(apiToken, prompt) {
+  const payload = {
+    model: 'black-forest-labs/flux-2-pro',
+    input: {
+      prompt: prompt,
+      aspect_ratio: '1:1',
+      output_format: 'webp'
+    }
+  };
 
-    const options = {
-      hostname: 'api.replicate.com',
-      path: '/v1/predictions',
+  try {
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiToken}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data)
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body));
-        } catch (e) {
-          reject(e);
-        }
-      });
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
     });
 
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
+    console.log('Response status:', response.status);
+    const text = await response.text();
+    console.log('Response body:', text.substring(0, 500));
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}. Response: ${text.substring(0, 200)}`);
+    }
+
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
+  }
 }
 
-function waitForPrediction(apiToken, predictionId, maxWait = 300000) {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const checkPrediction = () => {
-      if (Date.now() - startTime > maxWait) {
-        reject(new Error('Prediction timeout'));
-        return;
-      }
+async function waitForPrediction(apiToken, predictionId, maxWait = 300000) {
+  const startTime = Date.now();
 
-      const options = {
-        hostname: 'api.replicate.com',
-        path: `/v1/predictions/${predictionId}`,
-        method: 'GET',
+  const checkPrediction = async () => {
+    if (Date.now() - startTime > maxWait) {
+      throw new Error('Prediction timeout');
+    }
+
+    try {
+      const response = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
         headers: { 'Authorization': `Token ${apiToken}` }
-      };
-
-      const req = https.request(options, (res) => {
-        let body = '';
-        res.on('data', chunk => body += chunk);
-        res.on('end', () => {
-          try {
-            const prediction = JSON.parse(body);
-            if (prediction.status === 'succeeded') {
-              resolve(prediction.output[0]);
-            } else if (prediction.status === 'failed') {
-              reject(new Error(`Prediction failed: ${prediction.error}`));
-            } else {
-              setTimeout(checkPrediction, 1000);
-            }
-          } catch (e) {
-            reject(e);
-          }
-        });
       });
 
-      req.on('error', reject);
-      req.end();
-    };
+      const text = await response.text();
+      const prediction = JSON.parse(text);
 
-    checkPrediction();
-  });
+      if (prediction.status === 'succeeded') {
+        return prediction.output[0];
+      } else if (prediction.status === 'failed') {
+        throw new Error(`Prediction failed: ${prediction.error}`);
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return checkPrediction();
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return checkPrediction();
 }
 
-function fetchImageAsBase64(imageUrl) {
-  return new Promise((resolve, reject) => {
-    https.get(imageUrl, (res) => {
-      let data = '';
-      res.setEncoding('binary');
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        const base64 = Buffer.from(data, 'binary').toString('base64');
-        resolve(`data:image/webp;base64,${base64}`);
-      });
-    }).on('error', reject);
-  });
+async function fetchImageAsBase64(imageUrl) {
+  try {
+    const response = await fetch(imageUrl);
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    return `data:image/webp;base64,${base64}`;
+  } catch (error) {
+    throw new Error(`Failed to fetch image: ${error.message}`);
+  }
 }
