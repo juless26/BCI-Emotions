@@ -43,43 +43,16 @@ exports.handler = async (event, context) => {
 
     console.log('Calling Replicate with prompt:', enhancedPrompt);
 
-    // Get the latest version of flux-2-pro first
-    let modelVersion = null;
-    try {
-      const model = await replicate.models.get('black-forest-labs', 'flux-2-pro');
-      if (model && model.latest_version) {
-        modelVersion = model.latest_version.id;
-        console.log('Using flux-2-pro version:', modelVersion);
-      }
-    } catch (e) {
-      console.warn('Could not fetch model versions, will try with model name only:', e.message);
-    }
-
     // Run the model using Replicate client
-    let output;
-    if (modelVersion) {
-      output = await replicate.run(
-        `black-forest-labs/flux-2-pro:${modelVersion}`,
-        {
-          input: {
-            prompt: enhancedPrompt,
-            resolution: '1 MP',
-            aspect_ratio: '1:1',
-            output_format: 'webp'
-          }
-        }
-      );
-    } else {
-      // Fallback: try with just model name
-      output = await replicate.run('black-forest-labs/flux-2-pro', {
-        input: {
-          prompt: enhancedPrompt,
-          resolution: '1 MP',
-          aspect_ratio: '1:1',
-          output_format: 'webp'
-        }
-      });
-    }
+    // Use the direct model call which automatically resolves to latest version
+    const output = await replicate.run('black-forest-labs/flux-2-pro', {
+      input: {
+        prompt: enhancedPrompt,
+        resolution: '1 MP',
+        aspect_ratio: '1:1',
+        output_format: 'webp'
+      }
+    });
 
     // output is an array of image URLs
     const imageUrl = output[0];
@@ -129,7 +102,7 @@ async function fetchImageAsBase64(imageUrl) {
 
       res.on('end', () => {
         const base64 = Buffer.from(data, 'binary').toString('base64');
-        resolve(`data:image/png;base64,${base64}`);
+        resolve(`data:image/webp;base64,${base64}`);
       });
     }).on('error', reject);
   });
