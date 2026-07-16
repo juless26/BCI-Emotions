@@ -41,16 +41,30 @@ exports.handler = async (event, context) => {
 };
 
 async function createPrediction(apiToken, prompt) {
-  const payload = {
-    model: 'black-forest-labs/flux-2-pro',
-    input: {
-      prompt: prompt,
-      aspect_ratio: '1:1',
-      output_format: 'webp'
-    }
-  };
-
   try {
+    // First, get the latest version of flux-2-pro
+    const modelResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro', {
+      headers: { 'Authorization': `Token ${apiToken}` }
+    });
+
+    const modelData = await modelResponse.json();
+    const versionId = modelData.latest_version?.id;
+
+    if (!versionId) {
+      throw new Error('Could not fetch latest flux-2-pro version');
+    }
+
+    console.log('Using version:', versionId);
+
+    const payload = {
+      version: versionId,
+      input: {
+        prompt: prompt,
+        aspect_ratio: '1:1',
+        output_format: 'webp'
+      }
+    };
+
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
