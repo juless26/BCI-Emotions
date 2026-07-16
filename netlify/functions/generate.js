@@ -22,7 +22,7 @@ exports.handler = async (event, context) => {
     }
 
     // Call Stability AI API
-    const response = await fetch('https://api.stability.ai/v1/generate', {
+    const response = await fetch('https://api.stability.ai/v1/text-to-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
