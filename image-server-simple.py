@@ -9,10 +9,11 @@ import json
 import requests
 import base64
 import io
+import os
 from PIL import Image
 from urllib.parse import urlparse, parse_qs
 
-HF_TOKEN = "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"
+HF_TOKEN = os.environ.get('HUGGING_FACE_TOKEN', '')
 HF_API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
 
 class ImageServerHandler(BaseHTTPRequestHandler):
