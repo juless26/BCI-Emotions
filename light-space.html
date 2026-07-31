@@ -343,6 +343,47 @@
       cursor: pointer;
     }
 
+    .send-confirm {
+      margin: 0;
+      min-height: 16px;
+      font-size: 12px;
+      line-height: 1.4;
+      text-align: center;
+      color: #7fd4a0;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .send-confirm.is-on { opacity: 1; }
+
+    /* A refusal is not a confirmation, so it is not green. */
+    .send-confirm.is-warn { color: #d8b46a; }
+
+    .send-btn {
+      padding: 12px 16px;
+      background: rgba(100, 150, 220, 0.18);
+      border: 1px solid rgba(100, 150, 220, 0.45);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: rgba(100, 150, 220, 0.32);
+      border-color: rgba(100, 150, 220, 0.7);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .send-btn:focus-visible,
     .recipient-select:focus-visible {
       outline: 2px solid rgba(100, 150, 220, 0.9);
       outline-offset: 2px;
@@ -429,6 +470,8 @@
           <option value="Tomas">Tomas, friend</option>
           <option value="Grace">Grace, care team</option>
         </select>
+        <button class="send-btn" id="sendBtn" disabled>Send</button>
+        <p class="send-confirm" id="sendConfirm" role="status" aria-live="polite"></p>
       </div>
 
       <div class="info-box">
@@ -654,15 +697,35 @@
     // Choosing a person is the send: one action rather than two.
     const recipientSelect = document.getElementById('recipientSelect');
 
+    const sendBtn = document.getElementById('sendBtn');
+
+    // The choice stays put. Sending is a separate, deliberate act.
     recipientSelect.addEventListener('change', () => {
+      sendBtn.disabled = !recipientSelect.value;
+    });
+
+    const sendConfirm = document.getElementById('sendConfirm');
+    let confirmTimer = null;
+
+    function sayConfirm(msg, warn) {
+      sendConfirm.textContent = msg;
+      sendConfirm.classList.toggle('is-warn', !!warn);
+      sendConfirm.classList.add('is-on');
+      clearTimeout(confirmTimer);
+      confirmTimer = setTimeout(() => sendConfirm.classList.remove('is-on'), 5000);
+    }
+
+    sendBtn.addEventListener('click', () => {
       const who = recipientSelect.value;
       if (!who) return;
       if (currentMode === 'emotion' && !currentEmotion) {
+        sayConfirm('Choose an emotion first.', true);
         updateStatus('Choose an emotion first.');
-      } else {
-        updateStatus(`Sent to ${who}`);
+        return;
       }
-      recipientSelect.value = '';        // back to the prompt, ready for the next one
+      const label = recipientSelect.options[recipientSelect.selectedIndex].text;
+      sayConfirm(`\u2713 Sent to ${label}`, false);
+      updateStatus(`Sent to ${who}`);
     });
 
     function updateStatus(msg) {
