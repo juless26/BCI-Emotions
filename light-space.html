@@ -326,24 +326,31 @@
       letter-spacing: 0.5px;
     }
 
-    .privacy-btn {
-      padding: 12px 16px;
-      background: rgba(200, 100, 100, 0.2);
-      border: 1px solid rgba(200, 100, 100, 0.5);
-      border-radius: 6px;
-      color: #ffffff;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      letter-spacing: 0.5px;
+    .send-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .privacy-btn:hover {
-      background: rgba(200, 100, 100, 0.35);
-      border-color: rgba(200, 100, 100, 0.7);
+    .recipient-select {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      color: #dddddd;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
     }
+
+    .recipient-select:focus-visible {
+      outline: 2px solid rgba(100, 150, 220, 0.9);
+      outline-offset: 2px;
+    }
+
+
+
+
   </style>
 </head>
 <body>
@@ -412,7 +419,17 @@
         <div class="slider-value"><span id="realismValue">3</span> / 5 (Photo ← → Paint)</div>
       </div>
 
-      <button class="privacy-btn" id="privacyBtn">Privacy Mode</button>
+      <div class="send-group">
+        <label class="slider-label" for="recipientSelect">Send to</label>
+        <select class="recipient-select" id="recipientSelect">
+          <option value="">Choose a person</option>
+          <option value="Maya">Maya, daughter</option>
+          <option value="Daniel">Daniel, brother</option>
+          <option value="Ruth">Ruth, night nurse</option>
+          <option value="Tomas">Tomas, friend</option>
+          <option value="Grace">Grace, care team</option>
+        </select>
+      </div>
 
       <div class="info-box">
         <strong>Emotion:</strong> Decode emotional words to express feelings through color and light.<br><br>
@@ -503,7 +520,6 @@
     let currentEmotion = null;
     let intensity = 3;
     let realism = 3;
-    let privacyMode = false;
     let perlinNoise = new PerlinNoise();
     let generatedImageData = null;
 
@@ -634,10 +650,19 @@
       document.getElementById('realismValue').textContent = realism;
     });
 
-    // Privacy
-    document.getElementById('privacyBtn').addEventListener('click', () => {
-      privacyMode = !privacyMode;
-      document.getElementById('privacyBtn').textContent = privacyMode ? 'Privacy On' : 'Privacy Mode';
+
+    // Choosing a person is the send: one action rather than two.
+    const recipientSelect = document.getElementById('recipientSelect');
+
+    recipientSelect.addEventListener('change', () => {
+      const who = recipientSelect.value;
+      if (!who) return;
+      if (currentMode === 'emotion' && !currentEmotion) {
+        updateStatus('Choose an emotion first.');
+      } else {
+        updateStatus(`Sent to ${who}`);
+      }
+      recipientSelect.value = '';        // back to the prompt, ready for the next one
     });
 
     function updateStatus(msg) {
@@ -646,11 +671,6 @@
 
     // Drawing
     function drawFrame(time) {
-      if (privacyMode) {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        return;
-      }
 
       if (currentMode === 'emotion' && currentEmotion) {
         const emotion = emotions[currentEmotion];
