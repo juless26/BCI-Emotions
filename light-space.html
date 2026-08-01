@@ -359,6 +359,92 @@
     /* A refusal is not a confirmation, so it is not green. */
     .send-confirm.is-warn { color: #d8b46a; }
 
+    /* Adding is a setup job, not something done mid-conversation, so it stays
+       folded away behind one small control and never crowds the panel. */
+    .add-btn {
+      margin-block-start: 8px;
+      padding: 8px 10px;
+      background: transparent;
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      color: #9aa0a6;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      inline-size: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .add-btn:hover {
+      color: #dddddd;
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .add-form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-block-start: 8px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+    }
+
+    .add-form__l {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #8a8a8a;
+    }
+
+    .add-form__i {
+      padding: 9px 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 5px;
+      color: #ffffff;
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .add-form__row { display: flex; gap: 6px; }
+
+    .add-form__ok, .add-form__no {
+      flex: 1;
+      padding: 9px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .add-form__ok {
+      background: rgba(100, 150, 220, 0.2);
+      border: 1px solid rgba(100, 150, 220, 0.5);
+      color: #ffffff;
+    }
+
+    .add-form__ok:hover { background: rgba(100, 150, 220, 0.35); }
+
+    .add-form__no {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #9aa0a6;
+    }
+
+    .add-form__no:hover { color: #dddddd; }
+
+    .add-form__i:focus-visible, .add-btn:focus-visible,
+    .add-form__ok:focus-visible, .add-form__no:focus-visible {
+      outline: 2px solid rgba(100, 150, 220, 0.9);
+      outline-offset: 2px;
+    }
+
     .send-btn {
       padding: 12px 16px;
       background: rgba(100, 150, 220, 0.18);
@@ -439,6 +525,16 @@
       <!-- EMOTION MODE -->
       <div class="mode-content active" id="emotion-mode">
         <div class="emotion-grid" id="emotionGrid"></div>
+        <button class="add-btn" id="addWordBtn" aria-expanded="false">+ Add a word</button>
+        <form class="add-form" id="addWordForm" hidden>
+          <label class="add-form__l" for="newWord">New word</label>
+          <input class="add-form__i" id="newWord" type="text" maxlength="18"
+                 placeholder="Lonely" autocomplete="off">
+          <div class="add-form__row">
+            <button type="submit" class="add-form__ok">Add</button>
+            <button type="button" class="add-form__no" id="cancelWord">Cancel</button>
+          </div>
+        </form>
       </div>
 
       <!-- PAINT MODE -->
@@ -471,6 +567,19 @@
           <option value="Grace">Grace, care team</option>
         </select>
         <button class="send-btn" id="sendBtn" disabled>Send</button>
+        <button class="add-btn" id="addPersonBtn" aria-expanded="false">+ Add a person</button>
+        <form class="add-form" id="addPersonForm" hidden>
+          <label class="add-form__l" for="newName">Name</label>
+          <input class="add-form__i" id="newName" type="text" maxlength="24"
+                 placeholder="Anna, sister" autocomplete="off">
+          <label class="add-form__l" for="newPhone">Mobile number for SMS</label>
+          <input class="add-form__i" id="newPhone" type="tel" maxlength="20"
+                 placeholder="+1 555 010 4477" autocomplete="off" inputmode="tel">
+          <div class="add-form__row">
+            <button type="submit" class="add-form__ok">Save</button>
+            <button type="button" class="add-form__no" id="cancelPerson">Cancel</button>
+          </div>
+        </form>
         <p class="send-confirm" id="sendConfirm" role="status" aria-live="polite"></p>
       </div>
 
@@ -699,6 +808,113 @@
     });
 
 
+    /* ---- Adding a word, and adding a person -------------------------------
+       Both are folded away behind one control so the resting panel stays as
+       short as it was. Opening focuses the first field, Escape closes, Enter
+       saves. Anything added is kept in this browser so a demo survives a
+       reload. */
+    const store = {
+      read(k) { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (e) { return []; } },
+      write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    };
+
+    function wireDisclosure(btn, form, first, onClose) {
+      btn.addEventListener('click', () => {
+        const open = !form.hidden;
+        form.hidden = open;
+        btn.setAttribute('aria-expanded', String(!open));
+        if (!open) first.focus();
+      });
+      form.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { form.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.focus(); onClose && onClose(); }
+      });
+    }
+
+    /* A custom word has no palette of its own, so one is derived from the word
+       itself. The same word always yields the same colours, which matters: a
+       feeling should not look different each time it is used. */
+    function paletteFor(word) {
+      let h = 0;
+      for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) % 360;
+      const hsl = (deg, s, l) => `hsl(${(deg + 360) % 360} ${s}% ${l}%)`;
+      return [hsl(h, 70, 55), hsl(h + 28, 65, 45), hsl(h - 24, 75, 65)];
+    }
+
+    function addEmotionButton(word) {
+      const key = word.toLowerCase();
+      if (emotions[key]) return false;
+      emotions[key] = { colors: paletteFor(key), arousal: 0.5, valence: 0.5, custom: true };
+      const b = document.createElement('button');
+      b.className = 'emotion-btn';
+      b.textContent = word.charAt(0).toUpperCase() + word.slice(1);
+      b.dataset.emotion = key;
+      b.addEventListener('click', selectEmotion);
+      document.getElementById('emotionGrid').appendChild(b);
+      return b;
+    }
+
+    const addWordBtn = document.getElementById('addWordBtn');
+    const addWordForm = document.getElementById('addWordForm');
+    const newWord = document.getElementById('newWord');
+    wireDisclosure(addWordBtn, addWordForm, newWord);
+    document.getElementById('cancelWord').addEventListener('click', () => {
+      addWordForm.hidden = true; addWordBtn.setAttribute('aria-expanded', 'false');
+      newWord.value = ''; addWordBtn.focus();
+    });
+    addWordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const word = newWord.value.trim();
+      if (!word) { newWord.focus(); return; }
+      const btn = addEmotionButton(word);
+      if (!btn) { updateStatus(`${word} is already there.`); newWord.select(); return; }
+      store.write('vcs.words', [...store.read('vcs.words'), word]);
+      newWord.value = '';
+      addWordForm.hidden = true;
+      addWordBtn.setAttribute('aria-expanded', 'false');
+      btn.click();                       // added and chosen: one step, not two
+    });
+    store.read('vcs.words').forEach(addEmotionButton);
+
+    const addPersonBtn = document.getElementById('addPersonBtn');
+    const addPersonForm = document.getElementById('addPersonForm');
+    const newName = document.getElementById('newName');
+    const newPhone = document.getElementById('newPhone');
+    wireDisclosure(addPersonBtn, addPersonForm, newName);
+    document.getElementById('cancelPerson').addEventListener('click', () => {
+      addPersonForm.hidden = true; addPersonBtn.setAttribute('aria-expanded', 'false');
+      newName.value = ''; newPhone.value = ''; addPersonBtn.focus();
+    });
+
+    function addPersonOption(name, phone) {
+      const o = document.createElement('option');
+      o.value = name;
+      o.textContent = name;
+      o.dataset.phone = phone;
+      o.title = phone;
+      document.getElementById('recipientSelect').appendChild(o);
+      return o;
+    }
+
+    addPersonForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = newName.value.trim();
+      const phone = newPhone.value.trim();
+      if (!name) { newName.focus(); return; }
+      if (phone.replace(/\D/g, '').length < 7) {
+        sayConfirm('That number looks too short.', true);
+        newPhone.focus();
+        return;
+      }
+      addPersonOption(name, phone);
+      store.write('vcs.people', [...store.read('vcs.people'), { name, phone }]);
+      recipientSelect.value = name;      // added and selected, ready to send
+      sendBtn.disabled = false;
+      newName.value = ''; newPhone.value = '';
+      addPersonForm.hidden = true;
+      addPersonBtn.setAttribute('aria-expanded', 'false');
+      sayConfirm(`\u2713 ${name} added for SMS`, false);
+    });
+
     // Choosing a person is the send: one action rather than two.
     const recipientSelect = document.getElementById('recipientSelect');
 
@@ -719,6 +935,8 @@
       clearTimeout(confirmTimer);
       confirmTimer = setTimeout(() => sendConfirm.classList.remove('is-on'), 5000);
     }
+
+    store.read('vcs.people').forEach((p) => addPersonOption(p.name, p.phone));
 
     sendBtn.addEventListener('click', () => {
       const who = recipientSelect.value;
