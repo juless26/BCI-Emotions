@@ -691,6 +691,11 @@
     document.getElementById('realismSlider').addEventListener('input', (e) => {
       realism = parseInt(e.target.value);
       document.getElementById('realismValue').textContent = realism;
+      // The style is chosen when the picture is made, so a change only shows
+      // on the next one. Say so rather than leaving it looking inert.
+      if (currentMode === 'paint' && generatedImageData) {
+        updateStatus('Realism changed. Paint again to see it.');
+      }
     });
 
 
@@ -1738,9 +1743,9 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (generatedImageData) {
-          // Display generated image with realism control
-          const opacity = realism / 5;
-          ctx.globalAlpha = opacity;
+          // Realism belongs in the prompt, not here. Fading the finished image
+          // by realism/5 was what made the slider look like a brightness dial.
+          ctx.globalAlpha = 1;
 
           const scale = Math.min(
             canvas.width / generatedImageData.width,

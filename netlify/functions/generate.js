@@ -14,12 +14,18 @@ exports.handler = async (event, context) => {
       return { statusCode: 500, body: JSON.stringify({ error: 'Stability API key not configured' }) };
     }
 
-    let enhancedPrompt = prompt;
-    if (realism <= 2) {
-      enhancedPrompt += ', impressionistic, painterly, artistic style';
-    } else if (realism >= 5) {
-      enhancedPrompt += ', photorealistic, highly detailed, professional photography';
-    }
+    // Every step on the slider changes the prompt. Previously only 1-2 and 5
+    // did, so dragging between 2, 3 and 4 asked for exactly the same picture
+    // and the control looked broken.
+    const STYLE = {
+      1: ', loose expressive oil painting, heavy visible brushstrokes, abstract, painterly',
+      2: ', impressionistic painting, soft edges, artistic interpretation',
+      3: ', stylised illustration, painterly light, gentle detail',
+      4: ', naturalistic rendering, photographic lighting, fine detail',
+      5: ', photorealistic, highly detailed, professional photography, sharp focus',
+    };
+    const step = Math.min(5, Math.max(1, Number(realism) || 3));
+    const enhancedPrompt = prompt + STYLE[step];
 
     // Call Stability AI API
     const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
