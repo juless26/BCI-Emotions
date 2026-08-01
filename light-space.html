@@ -838,41 +838,60 @@
        listed is matched on its stem, and failing that gets a neutral field
        rather than a wrong one. */
     const FEELING_FAMILIES = [
-      { colors: ['#2C3E6B', '#1B2A4A', '#46618F'], arousal: 0.12, valence: 0.2,
-        words: ['lonely','alone','isolated','empty','numb','distant','homesick','abandoned','forgotten','invisible'] },
-      { colors: ['#3B5B7A', '#22384F', '#5C7FA3'], arousal: 0.15, valence: 0.25,
-        words: ['sad','low','blue','grieving','grief','mourning','heartbroken','disappointed','melancholy'] },
-      { colors: ['#8B1A1A', '#C73E1D', '#5E0F0F'], arousal: 0.9, valence: 0.12,
-        words: ['angry','furious','rage','cross','irritated','frustrated','fed','annoyed','resentful'] },
-      { colors: ['#6B1F5C', '#A8327D', '#3F1238'], arousal: 0.85, valence: 0.18,
-        words: ['scared','afraid','frightened','panicked','terrified','worried','nervous','uneasy','dread'] },
-      { colors: ['#B23A48', '#7A1F2B', '#D96A78'], arousal: 0.7, valence: 0.2,
-        words: ['pain','hurting','sore','aching','uncomfortable','stiff','burning'] },
-      { colors: ['#FFD166', '#FFA630', '#FFE9A8'], arousal: 0.9, valence: 0.95,
-        words: ['joyful','delighted','elated','excited','thrilled','playful','silly','proud','celebrating'] },
-      { colors: ['#8FD3B6', '#4FA98A', '#CDEBDD'], arousal: 0.2, valence: 0.85,
-        words: ['peaceful','safe','content','comfortable','settled','rested','relieved','still','ok','okay'] },
-      { colors: ['#F2B5D4', '#D97BA8', '#FBDCEA'], arousal: 0.45, valence: 0.9,
-        words: ['loved','grateful','thankful','tender','affectionate','close','warm','held'] },
-      { colors: ['#9A8FBF', '#6E6390', '#C3BBDA'], arousal: 0.06, valence: 0.55,
-        words: ['exhausted','drained','sleepy','weary','heavy','foggy','spent','worn'] },
-      { colors: ['#E8C07D', '#C99544', '#F6E2BC'], arousal: 0.55, valence: 0.8,
-        words: ['hopeful','determined','ready','patient','curious','interested'] },
-      { colors: ['#6F8F8F', '#4A6666', '#9FBDBD'], arousal: 0.4, valence: 0.4,
-        words: ['confused','lost','unsure','muddled','overwhelmed','stuck','bored','restless'] },
+      { colors: ['#3D6BC4', '#1E3A8A', '#6C9BE8'], arousal: 0.12, valence: 0.2,
+        words: ['lonely','alone','isolated','empty','numb','distant','homesick','abandoned','forgotten','invisible','ignored','left'] },
+      { colors: ['#4A7FB5', '#25507F', '#7FB0DC'], arousal: 0.15, valence: 0.25,
+        words: ['sad','low','blue','unhappy','grieving','grief','mourning','heartbroken','disappointed','melancholy','crying','tearful'] },
+      { colors: ['#7CB342', '#3F6B1E', '#B8DE68'], arousal: 0.6, valence: 0.25,
+        words: ['jealous','envious','envy','resentful','bitter','possessive','left out','excluded'] },
+      { colors: ['#E53935', '#8B1A1A', '#FF7043'], arousal: 0.9, valence: 0.12,
+        words: ['angry','furious','rage','mad','cross','irritated','frustrated','annoyed','fedup','livid','seething'] },
+      { colors: ['#8E24AA', '#4A148C', '#CE6FE0'], arousal: 0.85, valence: 0.18,
+        words: ['scared','afraid','frightened','panicked','terrified','worried','nervous','uneasy','dread','anxious','tense','jumpy'] },
+      { colors: ['#D81B60', '#7B1030', '#F06292'], arousal: 0.7, valence: 0.2,
+        words: ['pain','hurting','sore','aching','uncomfortable','stiff','burning','cramping','itchy'] },
+      { colors: ['#C0761E', '#7A4410', '#E8A33D'], arousal: 0.5, valence: 0.2,
+        words: ['ashamed','embarrassed','guilty','humiliated','exposed','awkward','sorry'] },
+      { colors: ['#FFD54F', '#FF9800', '#FFF3B0'], arousal: 0.9, valence: 0.95,
+        words: ['joyful','delighted','elated','excited','thrilled','playful','silly','proud','celebrating','glad','cheerful'] },
+      { colors: ['#4DB6AC', '#00796B', '#A7E5DD'], arousal: 0.2, valence: 0.85,
+        words: ['peaceful','safe','content','comfortable','settled','rested','relieved','still','ok','okay','fine','better'] },
+      { colors: ['#F06AA8', '#B03070', '#FBB6D6'], arousal: 0.45, valence: 0.9,
+        words: ['loved','grateful','thankful','tender','affectionate','close','warm','held','missing','fond'] },
+      { colors: ['#9575CD', '#5E35B1', '#D1C4E9'], arousal: 0.06, valence: 0.55,
+        words: ['exhausted','drained','sleepy','weary','heavy','foggy','spent','worn','sleep'] },
+      { colors: ['#F2A93B', '#C57A12', '#FFD79A'], arousal: 0.55, valence: 0.8,
+        words: ['hopeful','determined','ready','patient','curious','interested','eager','waiting'] },
+      { colors: ['#26A69A', '#00695C', '#80CBC4'], arousal: 0.4, valence: 0.4,
+        words: ['confused','lost','unsure','muddled','stuck','puzzled'] },
+      { colors: ['#EF6C00', '#B23C00', '#FFAB5E'], arousal: 0.75, valence: 0.3,
+        words: ['overwhelmed','restless','agitated','impatient','frantic','rushed','bored'] },
+      { colors: ['#5C9EAD', '#2E6274', '#9BD3E0'], arousal: 0.35, valence: 0.45,
+        words: ['thirsty','hungry','cold','hot','sick','nauseous','dizzy','unwell'] },
     ];
+
+    /* An unlisted word still has to look like a feeling. Grey read as nothing
+       at all, so the fallback keeps a vivid, saturated field and only the hue
+       comes from the word. It is arbitrary, but it is arbitrary and alive
+       rather than arbitrary and blank. */
+    function fallbackFeeling(word) {
+      let h = 0;
+      for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) % 360;
+      const hsl = (d, sat, l) => `hsl(${(d + 360) % 360} ${sat}% ${l}%)`;
+      return { colors: [hsl(h, 62, 52), hsl(h + 24, 58, 34), hsl(h - 20, 66, 70)],
+               arousal: 0.45, valence: 0.5 };
+    }
 
     function feelingFor(word) {
       const w = word.toLowerCase().trim();
       for (const f of FEELING_FAMILIES) if (f.words.includes(w)) return f;
-      // a stem match catches lonelier, saddened, frightening and so on
       for (const f of FEELING_FAMILIES) {
         for (const k of f.words) {
           const stem = k.length > 4 ? k.slice(0, Math.max(4, k.length - 1)) : k;
           if (w.startsWith(stem) || k.startsWith(w.slice(0, Math.max(4, w.length - 2)))) return f;
         }
       }
-      return { colors: ['#7E8AA2', '#5A6478', '#AAB4C6'], arousal: 0.4, valence: 0.5 };
+      return fallbackFeeling(w);
     }
 
     function addEmotionButton(word) {
