@@ -700,6 +700,10 @@
       generatedImageData = null;
       updateStatus(`${currentEmotion.toUpperCase()} selected`);
 
+      if (emotions[currentEmotion] && emotions[currentEmotion].custom) {
+        makeImageForWord(currentEmotion);
+      }
+
       // Toggle ambient SVG background for depressed emotion
       const ambientBg = document.getElementById('ambient-bg');
       if (currentEmotion === 'depressed') {
@@ -830,20 +834,24 @@
       });
     }
 
-    /* A custom word has no palette of its own, so one is derived from the word
-       itself. The same word always yields the same colours, which matters: a
-       feeling should not look different each time it is used. */
-    function paletteFor(word) {
-      let h = 0;
-      for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) % 360;
-      const hsl = (deg, s, l) => `hsl(${(deg + 360) % 360} ${s}% ${l}%)`;
-      return [hsl(h, 70, 55), hsl(h + 28, 65, 45), hsl(h - 24, 75, 65)];
+    /* The six built-in feelings have hand-tuned palettes and animate on the
+       canvas. A word somebody adds has neither, and deriving colours from its
+       letters produced something arbitrary rather than evocative: "lonely" came
+       out whatever hue the arithmetic happened to land on. A custom word is
+       drawn by the image generator instead, from a prompt built out of the word
+       and how strongly it was set. */
+    const FORCE = { 1: 'faint, barely there', 2: 'quiet, restrained',
+                    3: 'clear', 4: 'strong, insistent', 5: 'overwhelming, all-consuming' };
+
+    function promptForFeeling(word, level) {
+      return `an abstract image evoking the feeling of ${word}, ${FORCE[level] || 'clear'}, `
+           + 'emotional atmosphere, expressive colour and light, no words, no text, no letters';
     }
 
     function addEmotionButton(word) {
       const key = word.toLowerCase();
       if (emotions[key]) return false;
-      emotions[key] = { colors: paletteFor(key), arousal: 0.5, valence: 0.5, custom: true };
+      emotions[key] = { colors: ['#888', '#666', '#aaa'], arousal: 0.5, valence: 0.5, custom: true };
       const b = document.createElement('button');
       b.className = 'emotion-btn';
       b.textContent = word.charAt(0).toUpperCase() + word.slice(1);
@@ -852,6 +860,35 @@
       document.getElementById('emotionGrid').appendChild(b);
       return b;
     }
+
+    let wordRequest = 0;
+    async function makeImageForWord(word) {
+      const mine = ++wordRequest;                 // a later choice wins
+      updateStatus(`Making an image for ${word}... (20-60 sec)`);
+      try {
+        const url = await generateImageFromBackend(promptForFeeling(word, intensity));
+        if (mine !== wordRequest || currentEmotion !== word) return;
+        const img = new Image();
+        img.onload = () => {
+          if (mine !== wordRequest || currentEmotion !== word) return;
+          generatedImageData = img;
+          updateStatus(`${word.toUpperCase()} \u2713`);
+        };
+        img.onerror = () => updateStatus('Image failed to load');
+        img.src = url;
+      } catch (err) {
+        if (mine === wordRequest) updateStatus('Error: ' + err.message);
+      }
+    }
+
+    /* Moving Intensity changes the prompt, so the picture has to be remade.
+       Same rule as Realism in Paint: say so rather than look inert. */
+    document.getElementById('intensitySlider').addEventListener('change', () => {
+      if (currentMode === 'emotion' && currentEmotion
+          && emotions[currentEmotion] && emotions[currentEmotion].custom) {
+        makeImageForWord(currentEmotion);
+      }
+    });
 
     const addWordBtn = document.getElementById('addWordBtn');
     const addWordForm = document.getElementById('addWordForm');
@@ -958,7 +995,19 @@
     // Drawing
     function drawFrame(time) {
 
-      if (currentMode === 'emotion' && currentEmotion) {
+      if (currentMode === 'emotion' && currentEmotion
+          && emotions[currentEmotion] && emotions[currentEmotion].custom) {
+        // A word somebody added is a generated picture, not a canvas animation.
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (generatedImageData) {
+          const scale = Math.min(canvas.width / generatedImageData.width,
+                                 canvas.height / generatedImageData.height);
+          const w = generatedImageData.width * scale, h = generatedImageData.height * scale;
+          ctx.globalAlpha = 1;
+          ctx.drawImage(generatedImageData, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+        }
+      } else if (currentMode === 'emotion' && currentEmotion) {
         const emotion = emotions[currentEmotion];
         const t = time * 0.0001;
 
