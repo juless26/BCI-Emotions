@@ -1011,7 +1011,95 @@
     }
 
     // Drawing
+    /* Lonely has a scene of its own: a wireframe box with a solid black sphere
+       sitting inside it, on blue that a darker band keeps sweeping across. The
+       box is drawn as a real cube, eight corners projected through a camera and
+       joined by their twelve edges, so it turns rather than merely skewing. */
+    const CUBE_V = [
+      [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
+      [-1,-1, 1], [1,-1, 1], [1,1, 1], [-1,1, 1],
+    ];
+    const CUBE_E = [
+      [0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7],
+    ];
+
+    function drawLonely(t) {
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const strength = intensity / 5;
+
+      // the blue, with a darker band travelling across it
+      const base = ctx.createLinearGradient(0, 0, w, h);
+      base.addColorStop(0, '#1E3A8A');
+      base.addColorStop(0.55, '#3D6BC4');
+      base.addColorStop(1, '#16276B');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, w, h);
+
+      const sweep = ((t * 0.06) % 1.6) - 0.3;          // runs off both edges
+      const band = ctx.createLinearGradient((sweep - 0.35) * w, 0, (sweep + 0.35) * w, h);
+      band.addColorStop(0, 'rgba(6,12,38,0)');
+      band.addColorStop(0.5, `rgba(6,12,38,${0.45 + strength * 0.35})`);
+      band.addColorStop(1, 'rgba(6,12,38,0)');
+      ctx.fillStyle = band;
+      ctx.fillRect(0, 0, w, h);
+
+      // the box, turning slowly
+      const size = Math.min(w, h) * 0.26;
+      const ay = t * 0.12, ax = 0.42 + Math.sin(t * 0.05) * 0.06;
+      const project = ([x, y, z]) => {
+        let x1 = x * Math.cos(ay) - z * Math.sin(ay);
+        let z1 = x * Math.sin(ay) + z * Math.cos(ay);
+        let y1 = y * Math.cos(ax) - z1 * Math.sin(ax);
+        let z2 = y * Math.sin(ax) + z1 * Math.cos(ax);
+        const f = 3.2 / (3.2 + z2);                    // simple perspective
+        return [cx + x1 * size * f, cy + y1 * size * f, z2];
+      };
+      const pts = CUBE_V.map(project);
+
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      for (const [a, b] of CUBE_E) {
+        const depth = (pts[a][2] + pts[b][2]) / 2;
+        ctx.strokeStyle = `rgba(190,214,255,${0.28 + (1 - (depth + 1) / 2) * 0.5})`;
+        ctx.beginPath();
+        ctx.moveTo(pts[a][0], pts[a][1]);
+        ctx.lineTo(pts[b][0], pts[b][1]);
+        ctx.stroke();
+      }
+
+      // the sphere, inside it and quite solid
+      const r = size * 0.46;
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + r * 0.9, r * 0.85, r * 0.16, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(3,8,30,0.45)';
+      ctx.fill();
+      ctx.restore();
+
+      const ball = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.05, cx, cy, r);
+      ball.addColorStop(0, '#242a3d');
+      ball.addColorStop(0.45, '#0b0e18');
+      ball.addColorStop(1, '#000000');
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = ball;
+      ctx.fill();
+
+      ctx.beginPath();                                  // a thin rim so it sits in the light
+      ctx.arc(cx, cy, r, Math.PI * 1.15, Math.PI * 1.75);
+      ctx.strokeStyle = 'rgba(150,180,240,0.30)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
     function drawFrame(time) {
+
+      if (currentMode === 'emotion' && currentEmotion === 'lonely') {
+        drawLonely(time * 0.0001);
+        return;
+      }
 
       if (currentMode === 'emotion' && currentEmotion) {
         const emotion = emotions[currentEmotion];
