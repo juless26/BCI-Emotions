@@ -1019,6 +1019,11 @@
       [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
       [-1,-1, 1], [1,-1, 1], [1,1, 1], [-1,1, 1],
     ];
+    /* The ball carries its position and heading between frames. Starting off
+       both axes means it crosses the floor diagonally rather than tracking one
+       wall to the other. */
+    const lonelyBall = { x: -0.35, z: 0.2, vx: 0.6, vz: 0.42, t: 0 };
+
     const CUBE_E = [
       [0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7],
     ];
@@ -1069,26 +1074,44 @@
         ctx.stroke();
       }
 
-      // the sphere, inside it and quite solid
-      const r = size * 0.46;
-      ctx.save();
+      // the sphere rolls on the floor of the box, turning back at each wall
+      const BR = 0.34;                                  // radius, in box units
+      const limit = 1 - BR;
+      const speed = 0.055 + strength * 0.05;            // box widths per second
+      const dt = Math.min(0.05, Math.max(0, (t - lonelyBall.t)));
+      lonelyBall.t = t;
+
+      lonelyBall.x += lonelyBall.vx * speed * dt * 60;
+      lonelyBall.z += lonelyBall.vz * speed * dt * 60;
+      if (lonelyBall.x < -limit) { lonelyBall.x = -limit; lonelyBall.vx *= -1; }
+      if (lonelyBall.x >  limit) { lonelyBall.x =  limit; lonelyBall.vx *= -1; }
+      if (lonelyBall.z < -limit) { lonelyBall.z = -limit; lonelyBall.vz *= -1; }
+      if (lonelyBall.z >  limit) { lonelyBall.z =  limit; lonelyBall.vz *= -1; }
+
+      const floorY = 1 - BR;                            // resting on the bottom face
+      const [bxp, byp, bdepth] = project([lonelyBall.x, floorY, lonelyBall.z]);
+      const [sxp, syp] = project([lonelyBall.x, 1, lonelyBall.z]);
+      const f = 3.2 / (3.2 + bdepth);                   // nearer reads larger
+      const r = size * BR * f;
+
+      ctx.save();                                       // its shadow, on the floor below it
       ctx.beginPath();
-      ctx.ellipse(cx, cy + r * 0.9, r * 0.85, r * 0.16, 0, 0, Math.PI * 2);
+      ctx.ellipse(sxp, syp, r * 0.92, r * 0.22, 0, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(3,8,30,0.45)';
       ctx.fill();
       ctx.restore();
 
-      const ball = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.05, cx, cy, r);
+      const ball = ctx.createRadialGradient(bxp - r * 0.35, byp - r * 0.4, r * 0.05, bxp, byp, r);
       ball.addColorStop(0, '#242a3d');
       ball.addColorStop(0.45, '#0b0e18');
       ball.addColorStop(1, '#000000');
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(bxp, byp, r, 0, Math.PI * 2);
       ctx.fillStyle = ball;
       ctx.fill();
 
       ctx.beginPath();                                  // a thin rim so it sits in the light
-      ctx.arc(cx, cy, r, Math.PI * 1.15, Math.PI * 1.75);
+      ctx.arc(bxp, byp, r, Math.PI * 1.15, Math.PI * 1.75);
       ctx.strokeStyle = 'rgba(150,180,240,0.30)';
       ctx.lineWidth = 1.2;
       ctx.stroke();
