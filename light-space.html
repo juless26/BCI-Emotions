@@ -525,16 +525,6 @@
       <!-- EMOTION MODE -->
       <div class="mode-content active" id="emotion-mode">
         <div class="emotion-grid" id="emotionGrid"></div>
-        <button class="add-btn" id="addWordBtn" aria-expanded="false">+ Add a word</button>
-        <form class="add-form" id="addWordForm" hidden>
-          <label class="add-form__l" for="newWord">New word</label>
-          <input class="add-form__i" id="newWord" type="text" maxlength="18"
-                 placeholder="Lonely" autocomplete="off">
-          <div class="add-form__row">
-            <button type="submit" class="add-form__ok">Add</button>
-            <button type="button" class="add-form__no" id="cancelWord">Cancel</button>
-          </div>
-        </form>
       </div>
 
       <!-- PAINT MODE -->
@@ -662,7 +652,9 @@
       anxious: { colors: ['#C73E1D', '#8B0000', '#DC143C'], arousal: 0.95, valence: 0.15 },
       tired: { colors: ['#B19CD9', '#DDA0DD', '#E6B3E6'], arousal: 0.05, valence: 0.85 },
       depressed: { colors: ['#7B68EE', '#FF6347', '#FFD700'], arousal: 0.75, valence: 0.8 },
-      energized: { colors: ['#FF1493', '#FF6347', '#FFD700'], arousal: 0.95, valence: 0.85 }
+      energized: { colors: ['#FF1493', '#FF6347', '#FFD700'], arousal: 0.95, valence: 0.85 },
+      lonely: { colors: ['#3D6BC4', '#1E3A8A', '#6C9BE8'], arousal: 0.12, valence: 0.2 },
+      jealous: { colors: ['#7CB342', '#3F6B1E', '#B8DE68'], arousal: 0.6, valence: 0.25 }
     };
 
     const canvas = document.getElementById('canvas');
@@ -830,105 +822,6 @@
         if (e.key === 'Escape') { form.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.focus(); onClose && onClose(); }
       });
     }
-
-    /* A word somebody adds needs a palette that evokes it, and it has to be
-       ready instantly, like the six built in. So the word is looked up in a
-       small vocabulary of feelings grouped by how they actually look: cold and
-       still, hot and agitated, bright and open, heavy and dim. Anything not
-       listed is matched on its stem, and failing that gets a neutral field
-       rather than a wrong one. */
-    const FEELING_FAMILIES = [
-      { colors: ['#3D6BC4', '#1E3A8A', '#6C9BE8'], arousal: 0.12, valence: 0.2,
-        words: ['lonely','alone','isolated','empty','numb','distant','homesick','abandoned','forgotten','invisible','ignored','left'] },
-      { colors: ['#4A7FB5', '#25507F', '#7FB0DC'], arousal: 0.15, valence: 0.25,
-        words: ['sad','low','blue','unhappy','grieving','grief','mourning','heartbroken','disappointed','melancholy','crying','tearful'] },
-      { colors: ['#7CB342', '#3F6B1E', '#B8DE68'], arousal: 0.6, valence: 0.25,
-        words: ['jealous','envious','envy','resentful','bitter','possessive','left out','excluded'] },
-      { colors: ['#E53935', '#8B1A1A', '#FF7043'], arousal: 0.9, valence: 0.12,
-        words: ['angry','furious','rage','mad','cross','irritated','frustrated','annoyed','fedup','livid','seething'] },
-      { colors: ['#8E24AA', '#4A148C', '#CE6FE0'], arousal: 0.85, valence: 0.18,
-        words: ['scared','afraid','frightened','panicked','terrified','worried','nervous','uneasy','dread','anxious','tense','jumpy'] },
-      { colors: ['#D81B60', '#7B1030', '#F06292'], arousal: 0.7, valence: 0.2,
-        words: ['pain','hurting','sore','aching','uncomfortable','stiff','burning','cramping','itchy'] },
-      { colors: ['#C0761E', '#7A4410', '#E8A33D'], arousal: 0.5, valence: 0.2,
-        words: ['ashamed','embarrassed','guilty','humiliated','exposed','awkward','sorry'] },
-      { colors: ['#FFD54F', '#FF9800', '#FFF3B0'], arousal: 0.9, valence: 0.95,
-        words: ['joyful','delighted','elated','excited','thrilled','playful','silly','proud','celebrating','glad','cheerful'] },
-      { colors: ['#4DB6AC', '#00796B', '#A7E5DD'], arousal: 0.2, valence: 0.85,
-        words: ['peaceful','safe','content','comfortable','settled','rested','relieved','still','ok','okay','fine','better'] },
-      { colors: ['#F06AA8', '#B03070', '#FBB6D6'], arousal: 0.45, valence: 0.9,
-        words: ['loved','grateful','thankful','tender','affectionate','close','warm','held','missing','fond'] },
-      { colors: ['#9575CD', '#5E35B1', '#D1C4E9'], arousal: 0.06, valence: 0.55,
-        words: ['exhausted','drained','sleepy','weary','heavy','foggy','spent','worn','sleep'] },
-      { colors: ['#F2A93B', '#C57A12', '#FFD79A'], arousal: 0.55, valence: 0.8,
-        words: ['hopeful','determined','ready','patient','curious','interested','eager','waiting'] },
-      { colors: ['#26A69A', '#00695C', '#80CBC4'], arousal: 0.4, valence: 0.4,
-        words: ['confused','lost','unsure','muddled','stuck','puzzled'] },
-      { colors: ['#EF6C00', '#B23C00', '#FFAB5E'], arousal: 0.75, valence: 0.3,
-        words: ['overwhelmed','restless','agitated','impatient','frantic','rushed','bored'] },
-      { colors: ['#5C9EAD', '#2E6274', '#9BD3E0'], arousal: 0.35, valence: 0.45,
-        words: ['thirsty','hungry','cold','hot','sick','nauseous','dizzy','unwell'] },
-    ];
-
-    /* An unlisted word still has to look like a feeling. Grey read as nothing
-       at all, so the fallback keeps a vivid, saturated field and only the hue
-       comes from the word. It is arbitrary, but it is arbitrary and alive
-       rather than arbitrary and blank. */
-    function fallbackFeeling(word) {
-      let h = 0;
-      for (let i = 0; i < word.length; i++) h = (h * 31 + word.charCodeAt(i)) % 360;
-      const hsl = (d, sat, l) => `hsl(${(d + 360) % 360} ${sat}% ${l}%)`;
-      return { colors: [hsl(h, 62, 52), hsl(h + 24, 58, 34), hsl(h - 20, 66, 70)],
-               arousal: 0.45, valence: 0.5 };
-    }
-
-    function feelingFor(word) {
-      const w = word.toLowerCase().trim();
-      for (const f of FEELING_FAMILIES) if (f.words.includes(w)) return f;
-      for (const f of FEELING_FAMILIES) {
-        for (const k of f.words) {
-          const stem = k.length > 4 ? k.slice(0, Math.max(4, k.length - 1)) : k;
-          if (w.startsWith(stem) || k.startsWith(w.slice(0, Math.max(4, w.length - 2)))) return f;
-        }
-      }
-      return fallbackFeeling(w);
-    }
-
-    function addEmotionButton(word) {
-      const key = word.toLowerCase();
-      if (emotions[key]) return false;
-      const f = feelingFor(key);
-      emotions[key] = { colors: f.colors, arousal: f.arousal, valence: f.valence, custom: true };
-      const b = document.createElement('button');
-      b.className = 'emotion-btn';
-      b.textContent = word.charAt(0).toUpperCase() + word.slice(1);
-      b.dataset.emotion = key;
-      b.addEventListener('click', selectEmotion);
-      document.getElementById('emotionGrid').appendChild(b);
-      return b;
-    }
-
-    const addWordBtn = document.getElementById('addWordBtn');
-    const addWordForm = document.getElementById('addWordForm');
-    const newWord = document.getElementById('newWord');
-    wireDisclosure(addWordBtn, addWordForm, newWord);
-    document.getElementById('cancelWord').addEventListener('click', () => {
-      addWordForm.hidden = true; addWordBtn.setAttribute('aria-expanded', 'false');
-      newWord.value = ''; addWordBtn.focus();
-    });
-    addWordForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const word = newWord.value.trim();
-      if (!word) { newWord.focus(); return; }
-      const btn = addEmotionButton(word);
-      if (!btn) { updateStatus(`${word} is already there.`); newWord.select(); return; }
-      store.write('vcs.words', [...store.read('vcs.words'), word]);
-      newWord.value = '';
-      addWordForm.hidden = true;
-      addWordBtn.setAttribute('aria-expanded', 'false');
-      btn.click();                       // added and chosen: one step, not two
-    });
-    store.read('vcs.words').forEach(addEmotionButton);
 
     const addPersonBtn = document.getElementById('addPersonBtn');
     const addPersonForm = document.getElementById('addPersonForm');
@@ -1117,10 +1010,84 @@
       ctx.stroke();
     }
 
+    /* Jealousy: pale green wind tearing round a green field. The streaks are
+       kept between frames and driven round the centre, faster the closer in
+       they are, so the whole thing shears rather than turning as one piece.
+       Each frame lays the background back down at part opacity instead of
+       clearing it, which is what leaves the trails behind them. */
+    const jealousWind = { parts: [], t: 0 };
+
+    function seedWind(n) {
+      jealousWind.parts = [];
+      for (let i = 0; i < n; i++) {
+        const rr = 0.12 + Math.pow(Math.random(), 0.7) * 0.92;
+        jealousWind.parts.push({
+          r: rr,
+          ang: Math.random() * Math.PI * 2,
+          spin: (0.5 + 1.5 / (rr + 0.35)) * (0.85 + Math.random() * 0.4),
+          trail: 0.18 + Math.random() * 0.5,
+          w: 0.8 + Math.random() * 2.4,
+          wob: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    function drawJealous(t) {
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const fierce = 0.55 + (intensity / 5) * 0.9;
+      const want = Math.round(70 + (intensity / 5) * 90);
+      if (jealousWind.parts.length !== want) seedWind(want);
+
+      const dt = Math.min(0.05, Math.max(0, t - jealousWind.t));
+      jealousWind.t = t;
+
+      // the field, laid back down at part opacity so the streaks smear
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      const shift = Math.sin(t * 0.25) * 0.12;
+      bg.addColorStop(0, '#3F6B1E');
+      bg.addColorStop(Math.max(0.05, 0.45 + shift), '#7CB342');
+      bg.addColorStop(1, '#2C4D14');
+      ctx.globalAlpha = 0.26;
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+
+      const maxR = Math.hypot(w, h) * 0.52;
+      ctx.lineCap = 'round';
+
+      for (const p of jealousWind.parts) {
+        p.ang += p.spin * fierce * dt * 26;
+        p.wob += dt * 3;
+        const rr = p.r * maxR * (1 + Math.sin(p.wob) * 0.05);
+        const a = Math.max(0.12, 0.62 - p.r * 0.35) * (0.6 + fierce * 0.5);
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rr, rr * 0.72, 0, p.ang - p.trail, p.ang);
+        ctx.strokeStyle = `rgba(200,240,138,${a.toFixed(3)})`;
+        ctx.lineWidth = p.w;
+        ctx.stroke();
+
+        if (p.w > 2.2) {                       // the brightest few, whipping hardest
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, rr, rr * 0.72, 0, p.ang - p.trail * 0.35, p.ang);
+          ctx.strokeStyle = `rgba(233,255,190,${(a * 0.9).toFixed(3)})`;
+          ctx.lineWidth = p.w * 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
     function drawFrame(time) {
 
       if (currentMode === 'emotion' && currentEmotion === 'lonely') {
         drawLonely(time * 0.0001);
+        return;
+      }
+
+      if (currentMode === 'emotion'
+          && (currentEmotion === 'jealous' || currentEmotion === 'jealousy')) {
+        drawJealous(time * 0.0001);
         return;
       }
 
